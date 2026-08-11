@@ -140,7 +140,7 @@
   <div class="header-banner">
     <div>
       <h1>🥔 Gerenciador de Batatas</h1>
-      <p class="subtitle">Site Casamento com base em template de batatões!</p>
+      <p class="subtitle">Site Casamento com base em template de batatões!!!</p>
     </div>
 
     <!-- Seção de Autenticação / Perfil -->
