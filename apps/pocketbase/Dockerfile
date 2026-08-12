@@ -31,6 +31,9 @@ COPY pb_hooks/ ./pb_hooks/
 # Cria o diretório para armazenamento do banco de dados SQLite (pb_data)
 RUN mkdir -p /app/pb_data
 
+# Declara a pasta de dados como volume persistente no Docker
+VOLUME ["/app/pb_data"]
+
 # Expõe a porta 8090 do contêiner
 EXPOSE 8090
 

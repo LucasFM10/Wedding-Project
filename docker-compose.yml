@@ -50,4 +50,5 @@ services:
 
 volumes:
   pb_data:
+    name: wedding_pb_data
     driver: local
