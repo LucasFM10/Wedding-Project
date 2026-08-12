@@ -78,7 +78,7 @@ migrate((app) => {
 
     convidadosCollection.fields.add(new SelectField({
       name: "confirmacao",
-      values: ["Pendente", "Confirmado", "Não vai"],
+      values: ["Pendente", "Convite entregue", "Confirmado", "Não vai"],
       maxSelect: 1
     }));
 
