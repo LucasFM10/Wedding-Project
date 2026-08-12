@@ -22,6 +22,8 @@
 		"vite": "^8.0.16"
 	},
 	"dependencies": {
-		"pocketbase": "^0.27.1"
+		"@types/sortablejs": "^1.15.9",
+		"pocketbase": "^0.27.1",
+		"sortablejs": "^1.15.7"
 	}
 }

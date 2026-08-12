@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import Sortable from "sortablejs";
   import { pb } from "$lib/pocketbase";
   import { auth } from "$lib/auth.svelte";
   import { casamentoState, type CasamentoRecord } from "$lib/casamento.svelte";
@@ -203,36 +204,48 @@
   }
 
   /* ----------------------------------------------------
-     DRAG AND DROP REORDERING
+     SORTABLEJS — REORDENAÇÃO ARRASTAR E SOLTAR
   ---------------------------------------------------- */
-  function handleDragStart(e: DragEvent, index: number) {
-    draggedIndex = index;
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = "move";
+  let tbodyElement = $state<HTMLTableSectionElement | null>(null);
+  let sortableInstance: Sortable | null = null;
+
+  $effect(() => {
+    if (tbodyElement && !isAgrupadoPorTag && convidadosFiltrados.length > 0) {
+      if (sortableInstance) {
+        sortableInstance.destroy();
+        sortableInstance = null;
+      }
+
+      sortableInstance = new Sortable(tbodyElement, {
+        handle: '.drag-handle',
+        animation: 180,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        onEnd: (evt) => {
+          const oldIdx = evt.oldIndex;
+          const newIdx = evt.newIndex;
+
+          if (oldIdx !== undefined && newIdx !== undefined && oldIdx !== newIdx) {
+            const reordered = [...convidados];
+            const [movedItem] = reordered.splice(oldIdx, 1);
+            reordered.splice(newIdx, 0, movedItem);
+            convidados = reordered;
+          }
+        }
+      });
+    } else if (sortableInstance) {
+      sortableInstance.destroy();
+      sortableInstance = null;
     }
-  }
 
-  function handleDragOver(e: DragEvent) {
-    e.preventDefault();
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = "move";
-    }
-  }
-
-  function handleDrop(e: DragEvent, targetIndex: number) {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === targetIndex) {
-      draggedIndex = null;
-      return;
-    }
-
-    const reordered = [...convidados];
-    const [movedItem] = reordered.splice(draggedIndex, 1);
-    reordered.splice(targetIndex, 0, movedItem);
-
-    convidados = reordered;
-    draggedIndex = null;
-  }
+    return () => {
+      if (sortableInstance) {
+        sortableInstance.destroy();
+        sortableInstance = null;
+      }
+    };
+  });
 
   /* ----------------------------------------------------
      ORDENAÇÃO ALFABÉTICA (A-Z)
@@ -1589,17 +1602,9 @@
               {/each}
             </tr>
           </thead>
-          <tbody>
+          <tbody bind:this={tbodyElement}>
             {#each convidadosFiltrados as convidado, index (convidado.id)}
-              <tr
-                draggable="true"
-                ondragstart={(e) => handleDragStart(e, index)}
-                ondragover={handleDragOver}
-                ondrop={(e) => handleDrop(e, index)}
-                class="{convidado.isAcompanhante
-                  ? 'row-acompanhante'
-                  : ''} {draggedIndex === index ? 'row-dragging' : ''}"
-              >
+              <tr class={convidado.isAcompanhante ? "row-acompanhante" : ""}>
                 <!-- Numeração Sequencial com Alça Drag & Drop -->
                 <td class="col-num">
                   <div class="drag-handle-box">
@@ -2616,7 +2621,7 @@
     color: #c5221f;
   }
 
-  /* Drag and Drop Styles */
+  /* Drag and Drop Styles (SortableJS) */
   .drag-handle-box {
     display: flex;
     align-items: center;
@@ -2635,9 +2640,20 @@
     cursor: grabbing;
   }
 
-  .row-dragging {
-    opacity: 0.4;
-    background-color: #fff0f4 !important;
+  .sortable-ghost {
+    opacity: 0.35;
+    background-color: #FFF0F4 !important;
+    border: 2px dashed #C44569 !important;
+  }
+
+  .sortable-chosen {
+    background-color: #FFF8F3 !important;
+  }
+
+  .sortable-drag {
+    opacity: 0.95;
+    box-shadow: 0 8px 24px rgba(140, 29, 64, 0.25);
+    background-color: #FFFDFB !important;
   }
 
   /* Tag Grouping Sections */
