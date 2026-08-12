@@ -9,7 +9,7 @@
     nome: string;
     contato: string;
     email: string;
-    confirmacao: "Confirmado" | "Pendente" | "Convite entregue" | "Não irá";
+    confirmacao: "Confirmado" | "Pendente" | "Convite entregue" | "Não vai";
     tags: string[];
     isAcompanhante: boolean;
     convidadoPrincipalId?: string; // ID do Convidado Principal
