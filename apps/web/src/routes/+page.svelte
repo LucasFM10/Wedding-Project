@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { pb } from '$lib/pocketbase';
-  import { auth } from '$lib/auth.svelte';
-  import { casamentoState, type CasamentoRecord } from '$lib/casamento.svelte';
+  import { onMount } from "svelte";
+  import { pb } from "$lib/pocketbase";
+  import { auth } from "$lib/auth.svelte";
+  import { casamentoState, type CasamentoRecord } from "$lib/casamento.svelte";
 
   interface Convidado {
     id: string;
     nome: string;
     contato: string;
     email: string;
-    confirmacao: 'Confirmado' | 'Pendente' | 'Convite entregue' | 'Não vai';
+    confirmacao: "Confirmado" | "Pendente" | "Convite entregue" | "Não irá";
     tags: string[];
     isAcompanhante: boolean;
     convidadoPrincipalId?: string; // ID do Convidado Principal
@@ -24,20 +24,21 @@
   }
 
   // Estado de Login / Auth Form
-  let loginEmail = $state('user@teste.com');
-  let loginPassword = $state('senha123456');
-  let authError = $state('');
+  let loginEmail = $state("user@teste.com");
+  let loginPassword = $state("senha123456");
+  let authError = $state("");
   let authLoading = $state(false);
 
   // Estado do Formulário de Criar Novo Set "Casamento"
   let isCriandoNovoSet = $state(false);
-  let novoSetTitulo = $state('');
-  let novoSetData = $state('');
+  let novoSetTitulo = $state("");
+  let novoSetData = $state("");
   let setCreatingLoading = $state(false);
-  let setCreatingError = $state('');
+  let setCreatingError = $state("");
 
   // Estado da Importação Interativa de CSV
-  type ColumnRole = 'nome' | 'contato' | 'email' | 'confirmacao' | 'tag' | 'ignorar';
+  type ColumnRole =
+    "nome" | "contato" | "email" | "confirmacao" | "tag" | "ignorar";
 
   interface CsvHeaderCol {
     name: string;
@@ -49,15 +50,15 @@
   let csvRawLines = $state<string[][]>([]);
   let csvHeaders = $state<CsvHeaderCol[]>([]);
   let csvImporting = $state(false);
-  let csvStep = $state<'file' | 'map' | 'preview'>('file');
+  let csvStep = $state<"file" | "map" | "preview">("file");
 
   // Configuração inicial das colunas da tabela
   let colunas = $state<ColunaConfig[]>([
-    { id: 'contato', label: 'Contato', visivel: true },
-    { id: 'confirmacao', label: 'Confirmação', visivel: true },
-    { id: 'tags', label: 'Tags', visivel: true },
-    { id: 'acompanhante', label: 'É acompanhante?', visivel: true },
-    { id: 'acoes', label: 'Ações', visivel: true }
+    { id: "contato", label: "Contato", visivel: true },
+    { id: "confirmacao", label: "Confirmação", visivel: true },
+    { id: "tags", label: "Tags", visivel: true },
+    { id: "acompanhante", label: "É acompanhante?", visivel: true },
+    { id: "acoes", label: "Ações", visivel: true },
   ]);
 
   // Lista global de tags disponíveis para uso
@@ -73,32 +74,34 @@
   let isAgrupadoPorTag = $state(false);
 
   // Estado de busca e filtros
-  let busca = $state('');
-  let filtroStatus = $state<string>('Todos');
+  let busca = $state("");
+  let filtroStatus = $state<string>("Todos");
   let tagsFiltroAtivas = $state<string[]>([]);
 
   // Popover de Colunas
   let showColunasMenu = $state(false);
-  let novaColunaNome = $state('');
+  let novaColunaNome = $state("");
 
   // Modal de Gerenciador de Tags
   let isTagManagerOpen = $state(false);
-  let novaTagNome = $state('');
+  let novaTagNome = $state("");
   let tagEmEdicao = $state<string | null>(null);
-  let tagNovoNomeEdicao = $state('');
+  let tagNovoNomeEdicao = $state("");
 
   // Modal de Convidado (Adicionar / Editar)
   let isModalOpen = $state(false);
   let editingGuestId = $state<string | null>(null);
 
   // Campos do formulário de convidado
-  let formNome = $state('');
-  let formContato = $state('');
-  let formEmail = $state('');
-  let formConfirmacao = $state<'Confirmado' | 'Pendente' | 'Convite entregue' | 'Não vai'>('Pendente');
+  let formNome = $state("");
+  let formContato = $state("");
+  let formEmail = $state("");
+  let formConfirmacao = $state<
+    "Confirmado" | "Pendente" | "Convite entregue" | "Não vai"
+  >("Pendente");
   let formTags = $state<string[]>([]);
   let formIsAcompanhante = $state(false);
-  let formConvidadoPrincipalId = $state<string>('');
+  let formConvidadoPrincipalId = $state<string>("");
   let formCustomFields = $state<Record<string, string>>({});
 
   /* ----------------------------------------------------
@@ -106,7 +109,7 @@
   ---------------------------------------------------- */
   async function handleLogin(e: Event) {
     e.preventDefault();
-    authError = '';
+    authError = "";
     authLoading = true;
     try {
       await auth.login(loginEmail, loginPassword);
@@ -118,7 +121,8 @@
       }
     } catch (err: any) {
       console.error(err);
-      authError = 'Falha ao autenticar. Verifique e-mail e senha (ex: user@teste.com / senha123456).';
+      authError =
+        "Falha ao autenticar. Verifique e-mail e senha (ex: user@teste.com / senha123456).";
     } finally {
       authLoading = false;
     }
@@ -133,29 +137,31 @@
 
   async function carregarConvidadosDoCasamento(casamentoId: string) {
     try {
-      const records = await pb.collection('convidados').getFullList({
-        filter: `casamento = "${casamentoId}"`
+      const records = await pb.collection("convidados").getFullList({
+        filter: `casamento = "${casamentoId}"`,
       });
 
-      convidados = records.map(r => ({
+      convidados = records.map((r) => ({
         id: r.id,
         nome: r.nome,
-        contato: r.contato || '',
-        email: r.email || '',
-        confirmacao: (r.confirmacao as any) || 'Pendente',
+        contato: r.contato || "",
+        email: r.email || "",
+        confirmacao: (r.confirmacao as any) || "Pendente",
         tags: r.tags || [],
         isAcompanhante: r.is_acompanhante || false,
         convidadoPrincipalId: r.convidado_principal || undefined,
-        customFields: r.custom_fields || {}
+        customFields: r.custom_fields || {},
       }));
 
       // Extrai dinamicamente todas as tags ativas dos convidados do banco
-      const tagsDoBanco = Array.from(new Set(convidados.flatMap(c => c.tags))).filter(Boolean);
+      const tagsDoBanco = Array.from(
+        new Set(convidados.flatMap((c) => c.tags)),
+      ).filter(Boolean);
       if (tagsDoBanco.length > 0) {
         tagsDisponiveis = tagsDoBanco;
       }
     } catch (e) {
-      console.warn('Erro ao carregar convidados do PocketBase:', e);
+      console.warn("Erro ao carregar convidados do PocketBase:", e);
       convidados = [];
     }
   }
@@ -170,30 +176,30 @@
     e.preventDefault();
     if (!novoSetTitulo.trim() || !auth.user) return;
 
-    setCreatingError = '';
+    setCreatingError = "";
     setCreatingLoading = true;
 
     try {
       const novoCasamento = await casamentoState.criarNovoCasamento(
         auth.user.id,
         novoSetTitulo.trim(),
-        novoSetData
+        novoSetData,
       );
 
-      novoSetTitulo = '';
-      novoSetData = '';
+      novoSetTitulo = "";
+      novoSetData = "";
       isCriandoNovoSet = false;
       await carregarConvidadosDoCasamento(novoCasamento.id);
     } catch (err: any) {
-      setCreatingError = err.message || 'Erro ao criar o casamento.';
+      setCreatingError = err.message || "Erro ao criar o casamento.";
     } finally {
       setCreatingLoading = false;
     }
   }
 
   function preencherTeste() {
-    loginEmail = 'user@teste.com';
-    loginPassword = 'senha123456';
+    loginEmail = "user@teste.com";
+    loginPassword = "senha123456";
   }
 
   /* ----------------------------------------------------
@@ -202,14 +208,14 @@
   function handleDragStart(e: DragEvent, index: number) {
     draggedIndex = index;
     if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = "move";
     }
   }
 
   function handleDragOver(e: DragEvent) {
     e.preventDefault();
     if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = "move";
     }
   }
 
@@ -232,7 +238,9 @@
      ORDENAÇÃO ALFABÉTICA (A-Z)
   ---------------------------------------------------- */
   function ordenarAlfaAZ() {
-    convidados = [...convidados].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    convidados = [...convidados].sort((a, b) =>
+      a.nome.localeCompare(b.nome, "pt-BR"),
+    );
   }
 
   /* ----------------------------------------------------
@@ -241,7 +249,7 @@
   function parseCSV(text: string): string[][] {
     const lines: string[][] = [];
     let row: string[] = [];
-    let entry = '';
+    let entry = "";
     let inQuotes = false;
 
     for (let i = 0; i < text.length; i++) {
@@ -255,24 +263,24 @@
         } else {
           inQuotes = !inQuotes;
         }
-      } else if (c === ',' && !inQuotes) {
+      } else if (c === "," && !inQuotes) {
         row.push(entry.trim());
-        entry = '';
-      } else if ((c === '\r' || c === '\n') && !inQuotes) {
-        if (c === '\r' && next === '\n') i++;
+        entry = "";
+      } else if ((c === "\r" || c === "\n") && !inQuotes) {
+        if (c === "\r" && next === "\n") i++;
         row.push(entry.trim());
-        if (row.some(cell => cell.length > 0)) {
+        if (row.some((cell) => cell.length > 0)) {
           lines.push(row);
         }
         row = [];
-        entry = '';
+        entry = "";
       } else {
         entry += c;
       }
     }
     if (entry || row.length > 0) {
       row.push(entry.trim());
-      if (row.some(cell => cell.length > 0)) {
+      if (row.some((cell) => cell.length > 0)) {
         lines.push(row);
       }
     }
@@ -291,7 +299,9 @@
 
       const parsed = parseCSV(content);
       if (parsed.length < 2) {
-        alert('O arquivo CSV parece estar vazio ou não possui linhas de dados.');
+        alert(
+          "O arquivo CSV parece estar vazio ou não possui linhas de dados.",
+        );
         return;
       }
 
@@ -301,92 +311,114 @@
 
       csvHeaders = headers.map((h, i) => {
         const hLower = h.toLowerCase();
-        let role: ColumnRole = 'ignorar';
+        let role: ColumnRole = "ignorar";
 
-        if (hLower.includes('nome') || hLower === 'name' || hLower === 'convidado') {
-          role = 'nome';
-        } else if (hLower.includes('contato') || hLower.includes('telefone') || hLower.includes('phone')) {
-          role = 'contato';
-        } else if (hLower.includes('email')) {
-          role = 'email';
-        } else if (hLower.includes('presença') || hLower.includes('presenca') || hLower.includes('status') || hLower.includes('confirmação')) {
-          role = 'confirmacao';
-        } else if (
-          hLower.includes('convidado por') ||
-          hLower.includes('relação') ||
-          hLower.includes('relacao') ||
-          hLower.includes('missão') ||
-          hLower.includes('missao') ||
-          hLower.includes('idade') ||
-          hLower.includes('restrição') ||
-          hLower.includes('restricao') ||
-          hLower.includes('tag')
+        if (
+          hLower.includes("nome") ||
+          hLower === "name" ||
+          hLower === "convidado"
         ) {
-          role = 'tag';
+          role = "nome";
+        } else if (
+          hLower.includes("contato") ||
+          hLower.includes("telefone") ||
+          hLower.includes("phone")
+        ) {
+          role = "contato";
+        } else if (hLower.includes("email")) {
+          role = "email";
+        } else if (
+          hLower.includes("presença") ||
+          hLower.includes("presenca") ||
+          hLower.includes("status") ||
+          hLower.includes("confirmação")
+        ) {
+          role = "confirmacao";
+        } else if (
+          hLower.includes("convidado por") ||
+          hLower.includes("relação") ||
+          hLower.includes("relacao") ||
+          hLower.includes("missão") ||
+          hLower.includes("missao") ||
+          hLower.includes("idade") ||
+          hLower.includes("restrição") ||
+          hLower.includes("restricao") ||
+          hLower.includes("tag")
+        ) {
+          role = "tag";
         }
 
         return {
           name: h,
-          sample: firstRow[i] || '',
-          role
+          sample: firstRow[i] || "",
+          role,
         };
       });
 
-      csvStep = 'map';
+      csvStep = "map";
     };
-    reader.readAsText(file, 'UTF-8');
+    reader.readAsText(file, "UTF-8");
   }
 
   let csvPreviewConvidados = $derived.by(() => {
     if (csvRawLines.length < 2) return [];
 
     const dataRows = csvRawLines.slice(1);
-    return dataRows.map((row) => {
-      let nome = '';
-      let contato = '';
-      let email = '';
-      let confirmacao: 'Confirmado' | 'Pendente' | 'Convite entregue' | 'Não vai' = 'Pendente';
-      const extractedTags: string[] = [];
+    return dataRows
+      .map((row) => {
+        let nome = "";
+        let contato = "";
+        let email = "";
+        let confirmacao:
+          "Confirmado" | "Pendente" | "Convite entregue" | "Não vai" =
+          "Pendente";
+        const extractedTags: string[] = [];
 
-      row.forEach((cellVal, idx) => {
-        const colConfig = csvHeaders[idx];
-        if (!colConfig || !cellVal) return;
-        const val = cellVal.trim();
-        if (!val || val.toLowerCase() === 'nenhum') return;
+        row.forEach((cellVal, idx) => {
+          const colConfig = csvHeaders[idx];
+          if (!colConfig || !cellVal) return;
+          const val = cellVal.trim();
+          if (!val || val.toLowerCase() === "nenhum") return;
 
-        if (colConfig.role === 'nome' && !nome) {
-          nome = val;
-        } else if (colConfig.role === 'contato' && !contato) {
-          contato = val;
-        } else if (colConfig.role === 'email' && !email) {
-          email = val;
-        } else if (colConfig.role === 'confirmacao') {
-          const vLower = val.toLowerCase();
-          if (vLower.includes('entregue')) confirmacao = 'Convite entregue';
-          else if (vLower.includes('confir') || vLower === 'sim') confirmacao = 'Confirmado';
-          else if (vLower.includes('não') || vLower.includes('nao')) confirmacao = 'Não vai';
-          else confirmacao = 'Pendente';
-        } else if (colConfig.role === 'tag') {
-          const subTags = val.split(',').map(s => s.trim()).filter(s => s.length > 0 && s.toLowerCase() !== 'nenhum');
-          subTags.forEach(t => {
-            if (!extractedTags.includes(t)) extractedTags.push(t);
-          });
-        }
-      });
+          if (colConfig.role === "nome" && !nome) {
+            nome = val;
+          } else if (colConfig.role === "contato" && !contato) {
+            contato = val;
+          } else if (colConfig.role === "email" && !email) {
+            email = val;
+          } else if (colConfig.role === "confirmacao") {
+            const vLower = val.toLowerCase();
+            if (vLower.includes("entregue")) confirmacao = "Convite entregue";
+            else if (vLower.includes("confir") || vLower === "sim")
+              confirmacao = "Confirmado";
+            else if (vLower.includes("não") || vLower.includes("nao"))
+              confirmacao = "Não vai";
+            else confirmacao = "Pendente";
+          } else if (colConfig.role === "tag") {
+            const subTags = val
+              .split(",")
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0 && s.toLowerCase() !== "nenhum");
+            subTags.forEach((t) => {
+              if (!extractedTags.includes(t)) extractedTags.push(t);
+            });
+          }
+        });
 
-      return {
-        nome: nome || 'Sem Nome',
-        contato: contato || '',
-        email: email || '',
-        confirmacao,
-        tags: extractedTags.length > 0 ? extractedTags : ['Geral']
-      };
-    }).filter(c => c.nome !== 'Sem Nome');
+        return {
+          nome: nome || "Sem Nome",
+          contato: contato || "",
+          email: email || "",
+          confirmacao,
+          tags: extractedTags.length > 0 ? extractedTags : ["Geral"],
+        };
+      })
+      .filter((c) => c.nome !== "Sem Nome");
   });
 
   async function executarImportacaoCSV() {
     if (!casamentoState.casamentoAtivo) {
-      alert('Selecione um casamento antes de importar.');
+      alert("Selecione um casamento antes de importar.");
       return;
     }
 
@@ -398,20 +430,23 @@
       const novasTagsParaAdicionar = new Set<string>();
 
       for (const item of csvPreviewConvidados) {
-        const emailValido = (item.email && item.email !== '-' && item.email.includes('@')) ? item.email.trim() : '';
-        const contatoValido = item.contato ? item.contato.trim() : '';
+        const emailValido =
+          item.email && item.email !== "-" && item.email.includes("@")
+            ? item.email.trim()
+            : "";
+        const contatoValido = item.contato ? item.contato.trim() : "";
 
-        const pbRecord = await pb.collection('convidados').create({
+        const pbRecord = await pb.collection("convidados").create({
           casamento: casamentoId,
           nome: item.nome,
           contato: contatoValido,
           email: emailValido,
           confirmacao: item.confirmacao,
           tags: item.tags,
-          is_acompanhante: false
+          is_acompanhante: false,
         });
 
-        item.tags.forEach(t => novasTagsParaAdicionar.add(t));
+        item.tags.forEach((t) => novasTagsParaAdicionar.add(t));
 
         novosConvidados.push({
           id: pbRecord.id,
@@ -421,11 +456,11 @@
           confirmacao: item.confirmacao,
           tags: item.tags,
           isAcompanhante: false,
-          customFields: {}
+          customFields: {},
         });
       }
 
-      novasTagsParaAdicionar.forEach(t => {
+      novasTagsParaAdicionar.forEach((t) => {
         if (!tagsDisponiveis.includes(t)) {
           tagsDisponiveis = [...tagsDisponiveis, t];
         }
@@ -433,17 +468,19 @@
 
       convidados = [...novosConvidados, ...convidados];
       isCsvModalOpen = false;
-      csvStep = 'file';
-      alert(`🎉 Sucesso! ${novosConvidados.length} convidados importados para o casamento.`);
+      csvStep = "file";
+      alert(
+        `🎉 Sucesso! ${novosConvidados.length} convidados importados para o casamento.`,
+      );
     } catch (err: any) {
-      console.error('Erro detalhado da importação:', err);
-      let msgDetahar = '';
+      console.error("Erro detalhado da importação:", err);
+      let msgDetahar = "";
       if (err.data?.data) {
         msgDetahar = Object.entries(err.data.data)
           .map(([k, v]: any) => `${k}: ${v.message}`)
-          .join('\n');
+          .join("\n");
       }
-      alert('Erro durante a importação:\n' + (msgDetahar || err.message));
+      alert("Erro durante a importação:\n" + (msgDetahar || err.message));
     } finally {
       csvImporting = false;
     }
@@ -454,18 +491,21 @@
   ---------------------------------------------------- */
   let convidadosFiltrados = $derived(
     convidados.filter((c) => {
-      const matchBusca = busca.trim() === '' ||
-                         c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-                         c.contato.includes(busca) ||
-                         (c.email && c.email.toLowerCase().includes(busca.toLowerCase())) ||
-                         c.tags.some(t => t.toLowerCase().includes(busca.toLowerCase()));
+      const matchBusca =
+        busca.trim() === "" ||
+        c.nome.toLowerCase().includes(busca.toLowerCase()) ||
+        c.contato.includes(busca) ||
+        (c.email && c.email.toLowerCase().includes(busca.toLowerCase())) ||
+        c.tags.some((t) => t.toLowerCase().includes(busca.toLowerCase()));
 
-      const matchStatus = filtroStatus === 'Todos' || c.confirmacao === filtroStatus;
-      const matchTags = tagsFiltroAtivas.length === 0 ||
-                        tagsFiltroAtivas.some(t => c.tags.includes(t));
+      const matchStatus =
+        filtroStatus === "Todos" || c.confirmacao === filtroStatus;
+      const matchTags =
+        tagsFiltroAtivas.length === 0 ||
+        tagsFiltroAtivas.some((t) => c.tags.includes(t));
 
       return matchBusca && matchStatus && matchTags;
-    })
+    }),
   );
 
   // Grupos por Tag para modo Agrupado
@@ -474,13 +514,13 @@
 
     const map = new Map<string, Convidado[]>();
 
-    convidadosFiltrados.forEach(c => {
+    convidadosFiltrados.forEach((c) => {
       if (c.tags.length === 0) {
-        const list = map.get('Sem Tag') || [];
+        const list = map.get("Sem Tag") || [];
         list.push(c);
-        map.set('Sem Tag', list);
+        map.set("Sem Tag", list);
       } else {
-        c.tags.forEach(t => {
+        c.tags.forEach((t) => {
           const list = map.get(t) || [];
           list.push(c);
           map.set(t, list);
@@ -490,33 +530,41 @@
 
     return Array.from(map.entries()).map(([tag, list]) => ({
       tag,
-      convidados: list
+      convidados: list,
     }));
   });
 
   let totalConvidados = $derived(convidados.length);
-  let totalConfirmados = $derived(convidados.filter(c => c.confirmacao === 'Confirmado').length);
-  let totalEntregues = $derived(convidados.filter(c => c.confirmacao === 'Convite entregue').length);
-  let totalPendentes = $derived(convidados.filter(c => c.confirmacao === 'Pendente').length);
-  let totalNaoVao = $derived(convidados.filter(c => c.confirmacao === 'Não vai').length);
+  let totalConfirmados = $derived(
+    convidados.filter((c) => c.confirmacao === "Confirmado").length,
+  );
+  let totalEntregues = $derived(
+    convidados.filter((c) => c.confirmacao === "Convite entregue").length,
+  );
+  let totalPendentes = $derived(
+    convidados.filter((c) => c.confirmacao === "Pendente").length,
+  );
+  let totalNaoVao = $derived(
+    convidados.filter((c) => c.confirmacao === "Não vai").length,
+  );
 
   let possiveisPrincipais = $derived(
-    convidados.filter(c => c.id !== editingGuestId)
+    convidados.filter((c) => c.id !== editingGuestId),
   );
 
   function getNomeConvidado(id?: string): string {
-    if (!id) return '';
-    const convidado = convidados.find(c => c.id === id);
-    return convidado ? convidado.nome : '';
+    if (!id) return "";
+    const convidado = convidados.find((c) => c.id === id);
+    return convidado ? convidado.nome : "";
   }
 
   function countConvidadosPorTag(tag: string): number {
-    return convidados.filter(c => c.tags.includes(tag)).length;
+    return convidados.filter((c) => c.tags.includes(tag)).length;
   }
 
   function toggleFiltroTag(tag: string) {
     if (tagsFiltroAtivas.includes(tag)) {
-      tagsFiltroAtivas = tagsFiltroAtivas.filter(t => t !== tag);
+      tagsFiltroAtivas = tagsFiltroAtivas.filter((t) => t !== tag);
     } else {
       tagsFiltroAtivas = [...tagsFiltroAtivas, tag];
     }
@@ -527,8 +575,8 @@
   }
 
   function limparFiltros() {
-    busca = '';
-    filtroStatus = 'Todos';
+    busca = "";
+    filtroStatus = "Todos";
     tagsFiltroAtivas = [];
   }
 
@@ -536,28 +584,30 @@
      GERENCIAMENTO DE COLUNAS
   ---------------------------------------------------- */
   function toggleColuna(id: string) {
-    colunas = colunas.map(c => c.id === id ? { ...c, visivel: !c.visivel } : c);
+    colunas = colunas.map((c) =>
+      c.id === id ? { ...c, visivel: !c.visivel } : c,
+    );
   }
 
   function handleAdicionarColuna(e: Event) {
     e.preventDefault();
     if (!novaColunaNome.trim()) return;
 
-    const colId = 'col_' + Date.now();
+    const colId = "col_" + Date.now();
     const novaCol: ColunaConfig = {
       id: colId,
       label: novaColunaNome.trim(),
       visivel: true,
-      custom: true
+      custom: true,
     };
 
     colunas = [...colunas, novaCol];
-    novaColunaNome = '';
+    novaColunaNome = "";
   }
 
   function handleRemoverColuna(id: string) {
-    if (confirm('Tem certeza que deseja remover esta coluna personalizada?')) {
-      colunas = colunas.filter(c => c.id !== id);
+    if (confirm("Tem certeza que deseja remover esta coluna personalizada?")) {
+      colunas = colunas.filter((c) => c.id !== id);
     }
   }
 
@@ -575,7 +625,7 @@
     if (!formTags.includes(tagLimpa)) {
       formTags = [...formTags, tagLimpa];
     }
-    novaTagNome = '';
+    novaTagNome = "";
   }
 
   function startEditarTag(tag: string) {
@@ -590,41 +640,53 @@
       return;
     }
 
-    const convidadosComTag = convidados.filter(c => c.tags.includes(tagAntiga));
+    const convidadosComTag = convidados.filter((c) =>
+      c.tags.includes(tagAntiga),
+    );
 
-    tagsDisponiveis = tagsDisponiveis.map(t => t === tagAntiga ? novoNomeTag : t);
-    convidados = convidados.map(c => ({
+    tagsDisponiveis = tagsDisponiveis.map((t) =>
+      t === tagAntiga ? novoNomeTag : t,
+    );
+    convidados = convidados.map((c) => ({
       ...c,
-      tags: c.tags.map(t => t === tagAntiga ? novoNomeTag : t)
+      tags: c.tags.map((t) => (t === tagAntiga ? novoNomeTag : t)),
     }));
-    formTags = formTags.map(t => t === tagAntiga ? novoNomeTag : t);
-    tagsFiltroAtivas = tagsFiltroAtivas.map(t => t === tagAntiga ? novoNomeTag : t);
+    formTags = formTags.map((t) => (t === tagAntiga ? novoNomeTag : t));
+    tagsFiltroAtivas = tagsFiltroAtivas.map((t) =>
+      t === tagAntiga ? novoNomeTag : t,
+    );
     tagEmEdicao = null;
 
     for (const c of convidadosComTag) {
-      const novasTags = c.tags.map(t => t === tagAntiga ? novoNomeTag : t);
+      const novasTags = c.tags.map((t) => (t === tagAntiga ? novoNomeTag : t));
       try {
-        await pb.collection('convidados').update(c.id, { tags: novasTags });
+        await pb.collection("convidados").update(c.id, { tags: novasTags });
       } catch (e) {}
     }
   }
 
   async function handleExcluirTag(tagParaExcluir: string) {
-    if (confirm(`Tem certeza que deseja excluir a tag "${tagParaExcluir}" de todo o sistema?`)) {
-      const convidadosComTag = convidados.filter(c => c.tags.includes(tagParaExcluir));
+    if (
+      confirm(
+        `Tem certeza que deseja excluir a tag "${tagParaExcluir}" de todo o sistema?`,
+      )
+    ) {
+      const convidadosComTag = convidados.filter((c) =>
+        c.tags.includes(tagParaExcluir),
+      );
 
-      tagsDisponiveis = tagsDisponiveis.filter(t => t !== tagParaExcluir);
-      convidados = convidados.map(c => ({
+      tagsDisponiveis = tagsDisponiveis.filter((t) => t !== tagParaExcluir);
+      convidados = convidados.map((c) => ({
         ...c,
-        tags: c.tags.filter(t => t !== tagParaExcluir)
+        tags: c.tags.filter((t) => t !== tagParaExcluir),
       }));
-      formTags = formTags.filter(t => t !== tagParaExcluir);
-      tagsFiltroAtivas = tagsFiltroAtivas.filter(t => t !== tagParaExcluir);
+      formTags = formTags.filter((t) => t !== tagParaExcluir);
+      tagsFiltroAtivas = tagsFiltroAtivas.filter((t) => t !== tagParaExcluir);
 
       for (const c of convidadosComTag) {
-        const novasTags = c.tags.filter(t => t !== tagParaExcluir);
+        const novasTags = c.tags.filter((t) => t !== tagParaExcluir);
         try {
-          await pb.collection('convidados').update(c.id, { tags: novasTags });
+          await pb.collection("convidados").update(c.id, { tags: novasTags });
         } catch (e) {}
       }
     }
@@ -632,7 +694,7 @@
 
   function toggleTagSelecao(tag: string) {
     if (formTags.includes(tag)) {
-      formTags = formTags.filter(t => t !== tag);
+      formTags = formTags.filter((t) => t !== tag);
     } else {
       formTags = [...formTags, tag];
     }
@@ -655,7 +717,7 @@
     formConfirmacao = convidado.confirmacao;
     formTags = [...convidado.tags];
     formIsAcompanhante = convidado.isAcompanhante;
-    formConvidadoPrincipalId = convidado.convidadoPrincipalId || '';
+    formConvidadoPrincipalId = convidado.convidadoPrincipalId || "";
     formCustomFields = { ...(convidado.customFields || {}) };
     isModalOpen = true;
   }
@@ -667,13 +729,13 @@
   }
 
   function resetForm() {
-    formNome = '';
-    formContato = '';
-    formEmail = '';
-    formConfirmacao = 'Pendente';
+    formNome = "";
+    formContato = "";
+    formEmail = "";
+    formConfirmacao = "Pendente";
     formTags = [];
     formIsAcompanhante = false;
-    formConvidadoPrincipalId = '';
+    formConvidadoPrincipalId = "";
     formCustomFields = {};
   }
 
@@ -682,7 +744,7 @@
     if (!formNome.trim()) return;
 
     if (!casamentoState.casamentoAtivo) {
-      alert('Você precisa ter um casamento selecionado.');
+      alert("Você precisa ter um casamento selecionado.");
       return;
     }
 
@@ -690,18 +752,20 @@
 
     if (editingGuestId) {
       try {
-        await pb.collection('convidados').update(editingGuestId, {
+        await pb.collection("convidados").update(editingGuestId, {
           nome: formNome.trim(),
           contato: formContato.trim(),
           email: formEmail.trim(),
           confirmacao: formConfirmacao,
           tags: formTags,
           is_acompanhante: formIsAcompanhante,
-          convidado_principal: formIsAcompanhante ? formConvidadoPrincipalId : null,
-          custom_fields: formCustomFields
+          convidado_principal: formIsAcompanhante
+            ? formConvidadoPrincipalId
+            : null,
+          custom_fields: formCustomFields,
         });
 
-        convidados = convidados.map(c => {
+        convidados = convidados.map((c) => {
           if (c.id === editingGuestId) {
             return {
               ...c,
@@ -709,20 +773,22 @@
               contato: formContato.trim(),
               email: formEmail.trim(),
               confirmacao: formConfirmacao,
-              tags: formTags.length > 0 ? [...formTags] : ['Geral'],
+              tags: formTags.length > 0 ? [...formTags] : ["Geral"],
               isAcompanhante: formIsAcompanhante,
-              convidadoPrincipalId: formIsAcompanhante ? formConvidadoPrincipalId : undefined,
-              customFields: { ...formCustomFields }
+              convidadoPrincipalId: formIsAcompanhante
+                ? formConvidadoPrincipalId
+                : undefined,
+              customFields: { ...formCustomFields },
             };
           }
           return c;
         });
       } catch (err: any) {
-        alert('Erro ao atualizar convidado no PocketBase: ' + err.message);
+        alert("Erro ao atualizar convidado no PocketBase: " + err.message);
       }
     } else {
       try {
-        const pbRecord = await pb.collection('convidados').create({
+        const pbRecord = await pb.collection("convidados").create({
           casamento: casamentoId,
           nome: formNome.trim(),
           contato: formContato.trim(),
@@ -730,8 +796,10 @@
           confirmacao: formConfirmacao,
           tags: formTags,
           is_acompanhante: formIsAcompanhante,
-          convidado_principal: formIsAcompanhante ? formConvidadoPrincipalId : null,
-          custom_fields: formCustomFields
+          convidado_principal: formIsAcompanhante
+            ? formConvidadoPrincipalId
+            : null,
+          custom_fields: formCustomFields,
         });
 
         const novoRegistro: Convidado = {
@@ -740,15 +808,17 @@
           contato: formContato.trim(),
           email: formEmail.trim(),
           confirmacao: formConfirmacao,
-          tags: formTags.length > 0 ? [...formTags] : ['Geral'],
+          tags: formTags.length > 0 ? [...formTags] : ["Geral"],
           isAcompanhante: formIsAcompanhante,
-          convidadoPrincipalId: formIsAcompanhante ? formConvidadoPrincipalId : undefined,
-          customFields: { ...formCustomFields }
+          convidadoPrincipalId: formIsAcompanhante
+            ? formConvidadoPrincipalId
+            : undefined,
+          customFields: { ...formCustomFields },
         };
 
         convidados = [...convidados, novoRegistro];
       } catch (err: any) {
-        alert('Erro ao adicionar convidado no PocketBase: ' + err.message);
+        alert("Erro ao adicionar convidado no PocketBase: " + err.message);
       }
     }
 
@@ -758,42 +828,53 @@
   async function handleExcluirConvidado(id: string, nome: string) {
     if (confirm(`Tem certeza que deseja remover ${nome} da lista?`)) {
       try {
-        await pb.collection('convidados').delete(id);
-        convidados = convidados.filter(c => c.id !== id);
+        await pb.collection("convidados").delete(id);
+        convidados = convidados.filter((c) => c.id !== id);
       } catch (err: any) {
-        alert('Erro ao excluir convidado: ' + err.message);
+        alert("Erro ao excluir convidado: " + err.message);
       }
     }
   }
 
-  async function handleMudarStatus(id: string, novoStatus: 'Confirmado' | 'Pendente' | 'Convite entregue' | 'Não vai') {
+  async function handleMudarStatus(
+    id: string,
+    novoStatus: "Confirmado" | "Pendente" | "Convite entregue" | "Não vai",
+  ) {
     try {
-      await pb.collection('convidados').update(id, { confirmacao: novoStatus });
-      convidados = convidados.map(c => c.id === id ? { ...c, confirmacao: novoStatus } : c);
+      await pb.collection("convidados").update(id, { confirmacao: novoStatus });
+      convidados = convidados.map((c) =>
+        c.id === id ? { ...c, confirmacao: novoStatus } : c,
+      );
     } catch (err: any) {
-      alert('Erro ao alterar status: ' + err.message);
+      alert("Erro ao alterar status: " + err.message);
     }
   }
 
-  function handleAtualizarCustomField(convidadoId: string, colId: string, valor: string) {
-    convidados = convidados.map(c => {
+  function handleAtualizarCustomField(
+    convidadoId: string,
+    colId: string,
+    valor: string,
+  ) {
+    convidados = convidados.map((c) => {
       if (c.id === convidadoId) {
         return {
           ...c,
           customFields: {
             ...(c.customFields || {}),
-            [colId]: valor
-          }
+            [colId]: valor,
+          },
         };
       }
       return c;
     });
 
-    const convidado = convidados.find(c => c.id === convidadoId);
+    const convidado = convidados.find((c) => c.id === convidadoId);
     if (convidado) {
-      pb.collection('convidados').update(convidadoId, {
-        custom_fields: convidado.customFields
-      }).catch(console.error);
+      pb.collection("convidados")
+        .update(convidadoId, {
+          custom_fields: convidado.customFields,
+        })
+        .catch(console.error);
     }
   }
 
@@ -826,7 +907,8 @@
       <div class="login-card-header">
         <h1>Gerenciador de Casamento</h1>
         <p class="login-subtitle">
-          Acesse sua conta para visualizar e gerenciar o conjunto do seu evento com segurança.
+          Acesse sua conta para visualizar e gerenciar o conjunto do seu evento
+          com segurança.
         </p>
       </div>
 
@@ -857,8 +939,12 @@
           <div class="auth-error-alert">{authError}</div>
         {/if}
 
-        <button type="submit" class="btn-primary btn-full" disabled={authLoading}>
-          {authLoading ? 'Entrando...' : '🔑 Entrar no Sistema'}
+        <button
+          type="submit"
+          class="btn-primary btn-full"
+          disabled={authLoading}
+        >
+          {authLoading ? "Entrando..." : "🔑 Entrar no Sistema"}
         </button>
 
         <div class="demo-credentials-box">
@@ -872,7 +958,7 @@
     </div>
   </div>
 
-<!-- ====================================================
+  <!-- ====================================================
      ESTADO 2: SELEÇÃO / CRIAÇÃO DE SET DE CASAMENTO
 ==================================================== -->
 {:else if auth.isValid && (!casamentoState.casamentoAtivo || isCriandoNovoSet)}
@@ -885,19 +971,26 @@
 
     <div class="login-card set-creation-card">
       <div class="user-welcome-header">
-        <span class="badge-user">👤 Logado como: <strong>{auth.user?.email || ''}</strong></span>
+        <span class="badge-user"
+          >👤 Logado como: <strong>{auth.user?.email || ""}</strong></span
+        >
         <button class="btn-logout" onclick={handleLogout}>🚪 Sair</button>
       </div>
 
       {#if casamentoState.casamentosDoUsuario.length > 0 && !isCriandoNovoSet}
         <div class="set-select-section">
           <h2>Seus Conjuntos de Casamento</h2>
-          <p class="section-desc">Selecione o casamento que deseja gerenciar hoje:</p>
+          <p class="section-desc">
+            Selecione o casamento que deseja gerenciar hoje:
+          </p>
 
           <div class="wedding-sets-list">
             {#each casamentoState.casamentosDoUsuario as c}
               <button
-                class="wedding-set-item {casamentoState.casamentoAtivo?.id === c.id ? 'active' : ''}"
+                class="wedding-set-item {casamentoState.casamentoAtivo?.id ===
+                c.id
+                  ? 'active'
+                  : ''}"
                 onclick={() => handleSelecionarCasamento(c)}
               >
                 <div class="set-title-row">
@@ -913,14 +1006,20 @@
             <span>ou</span>
           </div>
 
-          <button class="btn-secondary btn-full" onclick={() => isCriandoNovoSet = true}>
+          <button
+            class="btn-secondary btn-full"
+            onclick={() => (isCriandoNovoSet = true)}
+          >
             + Criar Novo Conjunto de Casamento
           </button>
         </div>
       {:else}
         <div class="set-creation-form">
           <h2>Criar Novo Conjunto de Casamento</h2>
-          <p class="section-desc">Informe o título do seu grande dia para dar início à gestão de convidados.</p>
+          <p class="section-desc">
+            Informe o título do seu grande dia para dar início à gestão de
+            convidados.
+          </p>
 
           <form onsubmit={handleCriarNovoCasamento} class="main-login-form">
             <div class="form-group">
@@ -936,11 +1035,7 @@
 
             <div class="form-group">
               <label for="data-set">Data do Evento (Opcional)</label>
-              <input
-                id="data-set"
-                type="date"
-                bind:value={novoSetData}
-              />
+              <input id="data-set" type="date" bind:value={novoSetData} />
             </div>
 
             {#if setCreatingError}
@@ -949,12 +1044,22 @@
 
             <div class="modal-actions">
               {#if casamentoState.casamentosDoUsuario.length > 0}
-                <button type="button" class="btn-secondary" onclick={() => isCriandoNovoSet = false}>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  onclick={() => (isCriandoNovoSet = false)}
+                >
                   Voltar para seleção
                 </button>
               {/if}
-              <button type="submit" class="btn-primary" disabled={setCreatingLoading}>
-                {setCreatingLoading ? 'Criando...' : '💍 Criar Casamento e Acessar Módulo'}
+              <button
+                type="submit"
+                class="btn-primary"
+                disabled={setCreatingLoading}
+              >
+                {setCreatingLoading
+                  ? "Criando..."
+                  : "💍 Criar Casamento e Acessar Módulo"}
               </button>
             </div>
           </form>
@@ -963,7 +1068,7 @@
     </div>
   </div>
 
-<!-- ====================================================
+  <!-- ====================================================
      ESTADO 3: MÓDULO DE CONVIDADOS ISOLADO
 ==================================================== -->
 {:else}
@@ -971,19 +1076,26 @@
     <div class="tenant-banner">
       <div class="tenant-info">
         <span class="wedding-badge">
-          💍 <strong>{casamentoState.casamentoAtivo?.titulo || 'Casamento'}</strong>
+          💍 <strong
+            >{casamentoState.casamentoAtivo?.titulo || "Casamento"}</strong
+          >
         </span>
         <span class="tenant-tag">Ambiente Isolado do Usuário</span>
       </div>
 
       <div class="auth-bar">
         <div class="user-logged-info">
-          <span class="user-email">👤 <strong>{auth.user?.email || ''}</strong></span>
+          <span class="user-email"
+            >👤 <strong>{auth.user?.email || ""}</strong></span
+          >
 
           {#if casamentoState.casamentosDoUsuario.length > 1 || isCriandoNovoSet === false}
             <button
               class="btn-secondary btn-sm"
-              onclick={() => { casamentoState.casamentoAtivo = null; isCriandoNovoSet = false; }}
+              onclick={() => {
+                casamentoState.casamentoAtivo = null;
+                isCriandoNovoSet = false;
+              }}
             >
               🔄 Trocar / Novo Casamento
             </button>
@@ -1004,32 +1116,54 @@
       <div class="title-group">
         <h1>Convidados</h1>
         <p class="subtitle">
-          Gerencie sua lista de convidados para o <strong>{casamentoState.casamentoAtivo?.titulo || 'seu casamento'}</strong> com acompanhantes vinculados e reordenação drag and drop.
+          Gerencie sua lista de convidados para o <strong
+            >{casamentoState.casamentoAtivo?.titulo || "seu casamento"}</strong
+          > com acompanhantes vinculados e reordenação drag and drop.
         </p>
       </div>
 
       <div class="header-actions">
         <!-- Botão de Ordenar A-Z -->
-        <button class="btn-secondary" onclick={ordenarAlfaAZ} title="Ordenar lista alfabeticamente por Nome">
+        <button
+          class="btn-secondary"
+          onclick={ordenarAlfaAZ}
+          title="Ordenar lista alfabeticamente por Nome"
+        >
           🔤 Ordenar (A-Z)
         </button>
 
         <!-- Botão de Agrupar por Tags -->
         <button
           class="btn-secondary {isAgrupadoPorTag ? 'active-group-btn' : ''}"
-          onclick={() => isAgrupadoPorTag = !isAgrupadoPorTag}
+          onclick={() => (isAgrupadoPorTag = !isAgrupadoPorTag)}
           title="Agrupar visualmente a tabela por categorias de Tags"
         >
-          🏷️ {isAgrupadoPorTag ? 'Desagrupar Tags' : 'Agrupar por Tags'}
+          🏷️ {isAgrupadoPorTag ? "Desagrupar Tags" : "Agrupar por Tags"}
         </button>
 
         <!-- Botão de Importar CSV -->
-        <button class="btn-secondary" onclick={() => { isCsvModalOpen = true; csvStep = 'file'; }}>
+        <button
+          class="btn-secondary"
+          onclick={() => {
+            isCsvModalOpen = true;
+            csvStep = "file";
+          }}
+        >
           📥 Importar CSV
         </button>
 
         <button class="btn-primary" onclick={handleOpenModalCreate}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
@@ -1065,7 +1199,18 @@
     <!-- Toolbar e Filtros por Status -->
     <div class="toolbar">
       <div class="search-box">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          class="search-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
@@ -1076,7 +1221,11 @@
           aria-label="Buscar convidado por nome"
         />
         {#if busca}
-          <button class="btn-clear" onclick={() => busca = ''} title="Limpar busca">✕</button>
+          <button
+            class="btn-clear"
+            onclick={() => (busca = "")}
+            title="Limpar busca">✕</button
+          >
         {/if}
       </div>
 
@@ -1084,47 +1233,58 @@
         <div class="filter-pills">
           <button
             class="pill {filtroStatus === 'Todos' ? 'active' : ''}"
-            onclick={() => filtroStatus = 'Todos'}
+            onclick={() => (filtroStatus = "Todos")}
           >
             Todos ({totalConvidados})
           </button>
           <button
             class="pill {filtroStatus === 'Confirmado' ? 'active' : ''}"
-            onclick={() => filtroStatus = 'Confirmado'}
+            onclick={() => (filtroStatus = "Confirmado")}
           >
             Confirmados ({totalConfirmados})
           </button>
           <button
             class="pill {filtroStatus === 'Convite entregue' ? 'active' : ''}"
-            onclick={() => filtroStatus = 'Convite entregue'}
+            onclick={() => (filtroStatus = "Convite entregue")}
           >
             Convite entregue ({totalEntregues})
           </button>
           <button
             class="pill {filtroStatus === 'Pendente' ? 'active' : ''}"
-            onclick={() => filtroStatus = 'Pendente'}
+            onclick={() => (filtroStatus = "Pendente")}
           >
             Pendentes ({totalPendentes})
           </button>
           <button
             class="pill {filtroStatus === 'Não vai' ? 'active' : ''}"
-            onclick={() => filtroStatus = 'Não vai'}
+            onclick={() => (filtroStatus = "Não vai")}
           >
             Não vão ({totalNaoVao})
           </button>
         </div>
 
-        <button class="btn-secondary" onclick={() => isTagManagerOpen = true}>
+        <button class="btn-secondary" onclick={() => (isTagManagerOpen = true)}>
           ⚙️ Gerenciar Tags
         </button>
 
         <div class="columns-dropdown-wrapper">
           <button
             class="btn-secondary btn-columns"
-            onclick={() => showColunasMenu = !showColunasMenu}
+            onclick={() => (showColunasMenu = !showColunasMenu)}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9-9 9-9-1.8-9-9 1.8-9 9-9z"></path>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9-9 9-9-1.8-9-9 1.8-9 9-9z"
+              ></path>
               <path d="M12 8v8"></path>
               <path d="M8 12h8"></path>
             </svg>
@@ -1132,10 +1292,19 @@
           </button>
 
           {#if showColunasMenu}
-            <div class="columns-popover" onmouseleave={() => showColunasMenu = false} role="menu" tabindex="-1" aria-label="Gerenciador de Colunas">
+            <div
+              class="columns-popover"
+              onmouseleave={() => (showColunasMenu = false)}
+              role="menu"
+              tabindex="-1"
+              aria-label="Gerenciador de Colunas"
+            >
               <div class="popover-header">
                 <span>Exibir / Ocultar Colunas</span>
-                <button class="close-popover" onclick={() => showColunasMenu = false}>✕</button>
+                <button
+                  class="close-popover"
+                  onclick={() => (showColunasMenu = false)}>✕</button
+                >
               </div>
 
               <div class="popover-list">
@@ -1195,10 +1364,12 @@
         {#each tagsDisponiveis as tag}
           {@const count = countConvidadosPorTag(tag)}
           <button
-            class="tag-pill-btn {tagsFiltroAtivas.includes(tag) ? 'active' : ''}"
+            class="tag-pill-btn {tagsFiltroAtivas.includes(tag)
+              ? 'active'
+              : ''}"
             onclick={() => toggleFiltroTag(tag)}
           >
-            {tagsFiltroAtivas.includes(tag) ? '✓ ' : ''}{tag} ({count})
+            {tagsFiltroAtivas.includes(tag) ? "✓ " : ""}{tag} ({count})
           </button>
         {/each}
       </div>
@@ -1206,15 +1377,22 @@
 
     <div class="counter-bar">
       <div class="counter-info">
-        <span>Exibindo <strong>{convidadosFiltrados.length}</strong> de <strong>{totalConvidados}</strong> convidados</span>
-        {#if busca || filtroStatus !== 'Todos' || tagsFiltroAtivas.length > 0}
+        <span
+          >Exibindo <strong>{convidadosFiltrados.length}</strong> de
+          <strong>{totalConvidados}</strong> convidados</span
+        >
+        {#if busca || filtroStatus !== "Todos" || tagsFiltroAtivas.length > 0}
           <span class="active-filters-tag">
             Filtros ativos:
-            {filtroStatus !== 'Todos' ? `Status: ${filtroStatus}` : ''}
-            {tagsFiltroAtivas.length > 0 ? ` | Tags: ${tagsFiltroAtivas.join(', ')}` : ''}
-            {busca ? ` | Busca: "${busca}"` : ''}
+            {filtroStatus !== "Todos" ? `Status: ${filtroStatus}` : ""}
+            {tagsFiltroAtivas.length > 0
+              ? ` | Tags: ${tagsFiltroAtivas.join(", ")}`
+              : ""}
+            {busca ? ` | Busca: "${busca}"` : ""}
           </span>
-          <button class="btn-reset-filters" onclick={limparFiltros}>Limpar tudo</button>
+          <button class="btn-reset-filters" onclick={limparFiltros}
+            >Limpar tudo</button
+          >
         {/if}
       </div>
     </div>
@@ -1223,27 +1401,41 @@
     <div class="table-container">
       {#if convidadosFiltrados.length === 0}
         <div class="empty-state">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#C44569" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#C44569"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="12"></line>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
           <h3>Nenhum convidado cadastrado neste casamento</h3>
-          <p>Você ainda não possui convidados nesta lista ou os filtros ativos omitiram os registros.</p>
-          {#if busca || filtroStatus !== 'Todos' || tagsFiltroAtivas.length > 0}
+          <p>
+            Você ainda não possui convidados nesta lista ou os filtros ativos
+            omitiram os registros.
+          </p>
+          {#if busca || filtroStatus !== "Todos" || tagsFiltroAtivas.length > 0}
             <button class="btn-secondary" onclick={limparFiltros}>
               Limpar Filtros
             </button>
           {/if}
         </div>
-
       {:else if isAgrupadoPorTag}
         <!-- MODO AGRUPADO POR TAGS -->
         <div class="tag-grouped-container">
           {#each gruposDeTags as grupo}
             <div class="tag-group-section">
               <div class="tag-group-header">
-                <span class="tag-group-title">🏷️ {grupo.tag} ({grupo.convidados.length})</span>
+                <span class="tag-group-title"
+                  >🏷️ {grupo.tag} ({grupo.convidados.length})</span
+                >
               </div>
 
               <table class="guest-table">
@@ -1253,14 +1445,18 @@
                     <th>Nome</th>
                     {#each colunas as col}
                       {#if col.visivel}
-                        <th class={col.id === 'acoes' ? 'text-right' : ''}>{col.label}</th>
+                        <th class={col.id === "acoes" ? "text-right" : ""}
+                          >{col.label}</th
+                        >
                       {/if}
                     {/each}
                   </tr>
                 </thead>
                 <tbody>
                   {#each grupo.convidados as convidado, index (convidado.id)}
-                    <tr class={convidado.isAcompanhante ? 'row-acompanhante' : ''}>
+                    <tr
+                      class={convidado.isAcompanhante ? "row-acompanhante" : ""}
+                    >
                       <td class="col-num">
                         <span class="row-number">{index + 1}</span>
                       </td>
@@ -1275,7 +1471,7 @@
 
                       {#each colunas as col}
                         {#if col.visivel}
-                          {#if col.id === 'contato'}
+                          {#if col.id === "contato"}
                             <td class="col-contato">
                               <div class="contact-box">
                                 <span class="phone">{convidado.contato}</span>
@@ -1284,20 +1480,28 @@
                                 {/if}
                               </div>
                             </td>
-                          {:else if col.id === 'confirmacao'}
+                          {:else if col.id === "confirmacao"}
                             <td class="col-confirmacao">
                               <select
-                                class="status-badge status-{convidado.confirmacao.toLowerCase().replace(/ /g, '-')}"
+                                class="status-badge status-{convidado.confirmacao
+                                  .toLowerCase()
+                                  .replace(/ /g, '-')}"
                                 value={convidado.confirmacao}
-                                onchange={(e) => handleMudarStatus(convidado.id, e.currentTarget.value as any)}
+                                onchange={(e) =>
+                                  handleMudarStatus(
+                                    convidado.id,
+                                    e.currentTarget.value as any,
+                                  )}
                               >
                                 <option value="Pendente">● Pendente</option>
-                                <option value="Convite entregue">✉️ Convite entregue</option>
+                                <option value="Convite entregue"
+                                  >✉️ Convite entregue</option
+                                >
                                 <option value="Confirmado">✓ Confirmado</option>
                                 <option value="Não vai">✕ Não vai</option>
                               </select>
                             </td>
-                          {:else if col.id === 'tags'}
+                          {:else if col.id === "tags"}
                             <td class="col-tags">
                               <div class="tags-wrapper">
                                 {#each convidado.tags as tag}
@@ -1305,21 +1509,40 @@
                                 {/each}
                               </div>
                             </td>
-                          {:else if col.id === 'acompanhante'}
+                          {:else if col.id === "acompanhante"}
                             <td class="col-acompanhante">
                               {#if convidado.isAcompanhante}
-                                <span class="companion-badge secondary" title="Convidado acompanhante">
-                                  Sim, de <strong>{getNomeConvidado(convidado.convidadoPrincipalId) || 'Convidado Principal'}</strong>
+                                <span
+                                  class="companion-badge secondary"
+                                  title="Convidado acompanhante"
+                                >
+                                  Sim, de <strong
+                                    >{getNomeConvidado(
+                                      convidado.convidadoPrincipalId,
+                                    ) || "Convidado Principal"}</strong
+                                  >
                                 </span>
                               {/if}
                             </td>
-                          {:else if col.id === 'acoes'}
+                          {:else if col.id === "acoes"}
                             <td class="col-acoes text-right">
                               <div class="actions-group">
-                                <button class="action-btn edit-btn" onclick={() => handleOpenModalEdit(convidado)} title="Editar convidado">
+                                <button
+                                  class="action-btn edit-btn"
+                                  onclick={() => handleOpenModalEdit(convidado)}
+                                  title="Editar convidado"
+                                >
                                   ✏️
                                 </button>
-                                <button class="action-btn delete-btn" onclick={() => handleExcluirConvidado(convidado.id, convidado.nome)} title="Excluir convidado">
+                                <button
+                                  class="action-btn delete-btn"
+                                  onclick={() =>
+                                    handleExcluirConvidado(
+                                      convidado.id,
+                                      convidado.nome,
+                                    )}
+                                  title="Excluir convidado"
+                                >
                                   🗑️
                                 </button>
                               </div>
@@ -1330,8 +1553,13 @@
                                 type="text"
                                 class="custom-cell-input"
                                 placeholder="Informe o valor..."
-                                value={convidado.customFields[col.id] || ''}
-                                onblur={(e) => handleAtualizarCustomField(convidado.id, col.id, e.currentTarget.value)}
+                                value={convidado.customFields[col.id] || ""}
+                                onblur={(e) =>
+                                  handleAtualizarCustomField(
+                                    convidado.id,
+                                    col.id,
+                                    e.currentTarget.value,
+                                  )}
                               />
                             </td>
                           {/if}
@@ -1344,7 +1572,6 @@
             </div>
           {/each}
         </div>
-
       {:else}
         <!-- MODO PADRÃO DE LISTAGEM COM DRAG AND DROP REORDERING -->
         <table class="guest-table">
@@ -1355,7 +1582,9 @@
 
               {#each colunas as col}
                 {#if col.visivel}
-                  <th class={col.id === 'acoes' ? 'text-right' : ''}>{col.label}</th>
+                  <th class={col.id === "acoes" ? "text-right" : ""}
+                    >{col.label}</th
+                  >
                 {/if}
               {/each}
             </tr>
@@ -1367,12 +1596,16 @@
                 ondragstart={(e) => handleDragStart(e, index)}
                 ondragover={handleDragOver}
                 ondrop={(e) => handleDrop(e, index)}
-                class="{convidado.isAcompanhante ? 'row-acompanhante' : ''} {draggedIndex === index ? 'row-dragging' : ''}"
+                class="{convidado.isAcompanhante
+                  ? 'row-acompanhante'
+                  : ''} {draggedIndex === index ? 'row-dragging' : ''}"
               >
                 <!-- Numeração Sequencial com Alça Drag & Drop -->
                 <td class="col-num">
                   <div class="drag-handle-box">
-                    <span class="drag-handle" title="Arrastar para reordenar">⋮⋮</span>
+                    <span class="drag-handle" title="Arrastar para reordenar"
+                      >⋮⋮</span
+                    >
                     <span class="row-number">{index + 1}</span>
                   </div>
                 </td>
@@ -1388,7 +1621,7 @@
 
                 {#each colunas as col}
                   {#if col.visivel}
-                    {#if col.id === 'contato'}
+                    {#if col.id === "contato"}
                       <td class="col-contato">
                         <div class="contact-box">
                           <span class="phone">{convidado.contato}</span>
@@ -1397,20 +1630,28 @@
                           {/if}
                         </div>
                       </td>
-                    {:else if col.id === 'confirmacao'}
+                    {:else if col.id === "confirmacao"}
                       <td class="col-confirmacao">
                         <select
-                          class="status-badge status-{convidado.confirmacao.toLowerCase().replace(/ /g, '-')}"
+                          class="status-badge status-{convidado.confirmacao
+                            .toLowerCase()
+                            .replace(/ /g, '-')}"
                           value={convidado.confirmacao}
-                          onchange={(e) => handleMudarStatus(convidado.id, e.currentTarget.value as any)}
+                          onchange={(e) =>
+                            handleMudarStatus(
+                              convidado.id,
+                              e.currentTarget.value as any,
+                            )}
                         >
                           <option value="Pendente">● Pendente</option>
-                          <option value="Convite entregue">✉️ Convite entregue</option>
+                          <option value="Convite entregue"
+                            >✉️ Convite entregue</option
+                          >
                           <option value="Confirmado">✓ Confirmado</option>
                           <option value="Não vai">✕ Não vai</option>
                         </select>
                       </td>
-                    {:else if col.id === 'tags'}
+                    {:else if col.id === "tags"}
                       <td class="col-tags">
                         <div class="tags-wrapper">
                           {#each convidado.tags as tag}
@@ -1418,15 +1659,22 @@
                           {/each}
                         </div>
                       </td>
-                    {:else if col.id === 'acompanhante'}
+                    {:else if col.id === "acompanhante"}
                       <td class="col-acompanhante">
                         {#if convidado.isAcompanhante}
-                          <span class="companion-badge secondary" title="Convidado acompanhante">
-                            Sim, de <strong>{getNomeConvidado(convidado.convidadoPrincipalId) || 'Convidado Principal'}</strong>
+                          <span
+                            class="companion-badge secondary"
+                            title="Convidado acompanhante"
+                          >
+                            Sim, de <strong
+                              >{getNomeConvidado(
+                                convidado.convidadoPrincipalId,
+                              ) || "Convidado Principal"}</strong
+                            >
                           </span>
                         {/if}
                       </td>
-                    {:else if col.id === 'acoes'}
+                    {:else if col.id === "acoes"}
                       <td class="col-acoes text-right">
                         <div class="actions-group">
                           <button
@@ -1434,20 +1682,50 @@
                             onclick={() => handleOpenModalEdit(convidado)}
                             title="Editar convidado"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <path
+                                d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                              ></path>
+                              <path
+                                d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                              ></path>
                             </svg>
                           </button>
 
                           <button
                             class="action-btn delete-btn"
-                            onclick={() => handleExcluirConvidado(convidado.id, convidado.nome)}
+                            onclick={() =>
+                              handleExcluirConvidado(
+                                convidado.id,
+                                convidado.nome,
+                              )}
                             title="Excluir convidado"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
                               <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <path
+                                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                              ></path>
                             </svg>
                           </button>
                         </div>
@@ -1458,8 +1736,13 @@
                           type="text"
                           class="custom-cell-input"
                           placeholder="Informe o valor..."
-                          value={convidado.customFields[col.id] || ''}
-                          onblur={(e) => handleAtualizarCustomField(convidado.id, col.id, e.currentTarget.value)}
+                          value={convidado.customFields[col.id] || ""}
+                          onblur={(e) =>
+                            handleAtualizarCustomField(
+                              convidado.id,
+                              col.id,
+                              e.currentTarget.value,
+                            )}
                         />
                       </td>
                     {/if}
@@ -1478,8 +1761,8 @@
 {#if isCsvModalOpen}
   <div
     class="modal-backdrop"
-    onclick={() => isCsvModalOpen = false}
-    onkeydown={(e) => e.key === 'Escape' && (isCsvModalOpen = false)}
+    onclick={() => (isCsvModalOpen = false)}
+    onkeydown={(e) => e.key === "Escape" && (isCsvModalOpen = false)}
     role="button"
     tabindex="0"
   >
@@ -1494,27 +1777,41 @@
     >
       <div class="modal-header">
         <h2 id="csv-modal-title">📥 Importar Lista via CSV</h2>
-        <button class="modal-close" onclick={() => isCsvModalOpen = false}>✕</button>
+        <button class="modal-close" onclick={() => (isCsvModalOpen = false)}
+          >✕</button
+        >
       </div>
 
       <div class="csv-modal-body">
-        {#if csvStep === 'file'}
+        {#if csvStep === "file"}
           <div class="file-upload-box">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8C1D40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#8C1D40"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="17 8 12 3 7 8"></polyline>
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
             <h3>Selecione seu Arquivo CSV</h3>
-            <p>Selecione a planilha `.csv` de convidados (ex: arquivo do Notion ou Excel).</p>
+            <p>
+              Selecione a planilha `.csv` de convidados (ex: arquivo do Notion
+              ou Excel).
+            </p>
 
             <label class="btn-primary file-input-label">
               <span>Escolher Arquivo CSV</span>
               <input type="file" accept=".csv" onchange={handleFileSelected} />
             </label>
           </div>
-
-        {:else if csvStep === 'map'}
+        {:else if csvStep === "map"}
           <div class="csv-step-header">
             <h3>⚙️ Mapeamento de Colunas</h3>
             <p>Defina o papel de cada coluna encontrada no seu arquivo CSV:</p>
@@ -1545,18 +1842,19 @@
           </div>
 
           <div class="modal-actions">
-            <button class="btn-secondary" onclick={() => csvStep = 'file'}>
+            <button class="btn-secondary" onclick={() => (csvStep = "file")}>
               Voltar
             </button>
-            <button class="btn-primary" onclick={() => csvStep = 'preview'}>
+            <button class="btn-primary" onclick={() => (csvStep = "preview")}>
               Ver Pré-visualização ({csvPreviewConvidados.length} Convidados) ➔
             </button>
           </div>
-
-        {:else if csvStep === 'preview'}
+        {:else if csvStep === "preview"}
           <div class="csv-step-header">
             <h3>🔍 Pré-visualização dos Convidados</h3>
-            <p>Confira os nomes e as tags que foram mapeadas antes de confirmar:</p>
+            <p>
+              Confira os nomes e as tags que foram mapeadas antes de confirmar:
+            </p>
           </div>
 
           <div class="csv-preview-table-container">
@@ -1574,7 +1872,13 @@
                   <tr>
                     <td><strong>{item.nome}</strong></td>
                     <td>{item.contato}</td>
-                    <td><span class="status-badge status-{item.confirmacao.toLowerCase().replace(/ /g, '-')}">{item.confirmacao}</span></td>
+                    <td
+                      ><span
+                        class="status-badge status-{item.confirmacao
+                          .toLowerCase()
+                          .replace(/ /g, '-')}">{item.confirmacao}</span
+                      ></td
+                    >
                     <td>
                       <div class="tags-wrapper">
                         {#each item.tags as t}
@@ -1589,15 +1893,24 @@
           </div>
 
           {#if csvPreviewConvidados.length > 8}
-            <p class="preview-more-info">... e mais {csvPreviewConvidados.length - 8} convidados prontos para serem importados.</p>
+            <p class="preview-more-info">
+              ... e mais {csvPreviewConvidados.length - 8} convidados prontos para
+              serem importados.
+            </p>
           {/if}
 
           <div class="modal-actions">
-            <button class="btn-secondary" onclick={() => csvStep = 'map'}>
+            <button class="btn-secondary" onclick={() => (csvStep = "map")}>
               Voltar para Mapeamento
             </button>
-            <button class="btn-primary" onclick={executarImportacaoCSV} disabled={csvImporting}>
-              {csvImporting ? 'Importando no PocketBase...' : `🚀 Importar ${csvPreviewConvidados.length} Convidados`}
+            <button
+              class="btn-primary"
+              onclick={executarImportacaoCSV}
+              disabled={csvImporting}
+            >
+              {csvImporting
+                ? "Importando no PocketBase..."
+                : `🚀 Importar ${csvPreviewConvidados.length} Convidados`}
             </button>
           </div>
         {/if}
@@ -1611,7 +1924,7 @@
   <div
     class="modal-backdrop"
     onclick={handleCloseModal}
-    onkeydown={(e) => e.key === 'Escape' && handleCloseModal()}
+    onkeydown={(e) => e.key === "Escape" && handleCloseModal()}
     role="button"
     tabindex="0"
   >
@@ -1626,9 +1939,13 @@
     >
       <div class="modal-header">
         <h2 id="modal-title">
-          {editingGuestId ? 'Editar Convidado' : 'Adicionar Convidado'}
+          {editingGuestId ? "Editar Convidado" : "Adicionar Convidado"}
         </h2>
-        <button class="modal-close" onclick={handleCloseModal} aria-label="Fechar modal">✕</button>
+        <button
+          class="modal-close"
+          onclick={handleCloseModal}
+          aria-label="Fechar modal">✕</button
+        >
       </div>
 
       <form onsubmit={handleSalvarConvidado} class="modal-form">
@@ -1685,9 +2002,17 @@
 
           {#if formIsAcompanhante}
             <div class="select-principal-box">
-              <label for="select-principal">Selecionar Convidado Principal *</label>
-              <select id="select-principal" bind:value={formConvidadoPrincipalId} required={formIsAcompanhante}>
-                <option value="" disabled>-- Selecione quem está levando este convidado --</option>
+              <label for="select-principal"
+                >Selecionar Convidado Principal *</label
+              >
+              <select
+                id="select-principal"
+                bind:value={formConvidadoPrincipalId}
+                required={formIsAcompanhante}
+              >
+                <option value="" disabled
+                  >-- Selecione quem está levando este convidado --</option
+                >
                 {#each possiveisPrincipais as p}
                   <option value={p.id}>{p.nome}</option>
                 {/each}
@@ -1702,10 +2027,12 @@
             {#each tagsDisponiveis as tag}
               <button
                 type="button"
-                class="tag-toggle-btn {formTags.includes(tag) ? 'selected' : ''}"
+                class="tag-toggle-btn {formTags.includes(tag)
+                  ? 'selected'
+                  : ''}"
                 onclick={() => toggleTagSelecao(tag)}
               >
-                {formTags.includes(tag) ? '✓ ' : '+ '}{tag}
+                {formTags.includes(tag) ? "✓ " : "+ "}{tag}
               </button>
             {/each}
           </div>
@@ -1716,7 +2043,11 @@
               placeholder="Criar nova tag personalizada..."
               bind:value={novaTagNome}
             />
-            <button type="button" class="btn-secondary" onclick={handleCriarNovaTag}>
+            <button
+              type="button"
+              class="btn-secondary"
+              onclick={handleCriarNovaTag}
+            >
               + Tag
             </button>
           </div>
@@ -1730,19 +2061,24 @@
                 id={col.id}
                 type="text"
                 placeholder="Informação para {col.label}..."
-                value={formCustomFields[col.id] || ''}
-                oninput={(e) => formCustomFields[col.id] = e.currentTarget.value}
+                value={formCustomFields[col.id] || ""}
+                oninput={(e) =>
+                  (formCustomFields[col.id] = e.currentTarget.value)}
               />
             </div>
           {/if}
         {/each}
 
         <div class="modal-actions">
-          <button type="button" class="btn-secondary" onclick={handleCloseModal}>
+          <button
+            type="button"
+            class="btn-secondary"
+            onclick={handleCloseModal}
+          >
             Cancelar
           </button>
           <button type="submit" class="btn-primary">
-            {editingGuestId ? 'Salvar Alterações' : 'Adicionar Convidado'}
+            {editingGuestId ? "Salvar Alterações" : "Adicionar Convidado"}
           </button>
         </div>
       </form>
@@ -1754,8 +2090,8 @@
 {#if isTagManagerOpen}
   <div
     class="modal-backdrop"
-    onclick={() => isTagManagerOpen = false}
-    onkeydown={(e) => e.key === 'Escape' && (isTagManagerOpen = false)}
+    onclick={() => (isTagManagerOpen = false)}
+    onkeydown={(e) => e.key === "Escape" && (isTagManagerOpen = false)}
     role="button"
     tabindex="0"
   >
@@ -1770,12 +2106,15 @@
     >
       <div class="modal-header">
         <h2 id="tag-modal-title">Gerenciador de Tags</h2>
-        <button class="modal-close" onclick={() => isTagManagerOpen = false}>✕</button>
+        <button class="modal-close" onclick={() => (isTagManagerOpen = false)}
+          >✕</button
+        >
       </div>
 
       <div class="tag-manager-body">
         <p class="tag-manager-help">
-          Edite ou remova as tags cadastradas no sistema. Alterar o nome de uma tag irá atualizá-la em todos os convidados automaticamente.
+          Edite ou remova as tags cadastradas no sistema. Alterar o nome de uma
+          tag irá atualizá-la em todos os convidados automaticamente.
         </p>
 
         <div class="tag-manage-list">
@@ -1786,15 +2125,29 @@
                   type="text"
                   class="tag-edit-input"
                   bind:value={tagNovoNomeEdicao}
-                  onkeydown={(e) => e.key === 'Enter' && salvarEdicaoTag(tag)}
+                  onkeydown={(e) => e.key === "Enter" && salvarEdicaoTag(tag)}
                 />
-                <button class="btn-save-tag" onclick={() => salvarEdicaoTag(tag)}>Salvar</button>
-                <button class="btn-cancel-tag" onclick={() => tagEmEdicao = null}>Cancelar</button>
+                <button
+                  class="btn-save-tag"
+                  onclick={() => salvarEdicaoTag(tag)}>Salvar</button
+                >
+                <button
+                  class="btn-cancel-tag"
+                  onclick={() => (tagEmEdicao = null)}>Cancelar</button
+                >
               {:else}
                 <span class="tag-pill">{tag}</span>
                 <div class="tag-manage-actions">
-                  <button class="btn-icon-tag" onclick={() => startEditarTag(tag)} title="Renomear tag">✏️</button>
-                  <button class="btn-icon-tag danger" onclick={() => handleExcluirTag(tag)} title="Excluir tag">🗑️</button>
+                  <button
+                    class="btn-icon-tag"
+                    onclick={() => startEditarTag(tag)}
+                    title="Renomear tag">✏️</button
+                  >
+                  <button
+                    class="btn-icon-tag danger"
+                    onclick={() => handleExcluirTag(tag)}
+                    title="Excluir tag">🗑️</button
+                  >
                 </div>
               {/if}
             </div>
@@ -1830,8 +2183,8 @@
   }
 
   .login-card {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 20px;
     padding: 2.2rem 2rem;
     width: 100%;
@@ -1845,12 +2198,12 @@
 
   .login-card-header h1 {
     font-size: 2.2rem;
-    color: #8C1D40;
+    color: #8c1d40;
     margin: 0 0 0.5rem 0;
   }
 
   .login-subtitle {
-    color: #5C4A52;
+    color: #5c4a52;
     font-size: 0.92rem;
     line-height: 1.45;
     margin: 0;
@@ -1873,11 +2226,11 @@
   .demo-credentials-box {
     margin-top: 1.25rem;
     padding: 1rem;
-    background: #FFF8F3;
-    border: 1px dashed #E7D6DC;
+    background: #fff8f3;
+    border: 1px dashed #e7d6dc;
     border-radius: 10px;
     font-size: 0.82rem;
-    color: #5C4A52;
+    color: #5c4a52;
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
@@ -1885,9 +2238,9 @@
   }
 
   .btn-quick-fill {
-    background: #FFFDFB;
-    border: 1px solid #C44569;
-    color: #8C1D40;
+    background: #fffdfb;
+    border: 1px solid #c44569;
+    color: #8c1d40;
     padding: 0.4rem 0.8rem;
     border-radius: 6px;
     font-size: 0.78rem;
@@ -1906,24 +2259,24 @@
     align-items: center;
     padding-bottom: 1rem;
     margin-bottom: 1.5rem;
-    border-bottom: 1px solid #E7D6DC;
+    border-bottom: 1px solid #e7d6dc;
   }
 
   .badge-user {
     font-size: 0.88rem;
-    color: #8C1D40;
+    color: #8c1d40;
   }
 
   .set-select-section h2,
   .set-creation-form h2 {
     font-size: 1.6rem;
-    color: #8C1D40;
+    color: #8c1d40;
     margin: 0 0 0.4rem 0;
   }
 
   .section-desc {
     font-size: 0.9rem;
-    color: #5C4A52;
+    color: #5c4a52;
     margin: 0 0 1.5rem 0;
   }
 
@@ -1935,8 +2288,8 @@
   }
 
   .wedding-set-item {
-    background: #FFF8F3;
-    border: 1px solid #E7D6DC;
+    background: #fff8f3;
+    border: 1px solid #e7d6dc;
     padding: 1rem 1.25rem;
     border-radius: 12px;
     display: flex;
@@ -1947,8 +2300,8 @@
   }
 
   .wedding-set-item:hover {
-    border-color: #C44569;
-    background: #FFF0F4;
+    border-color: #c44569;
+    background: #fff0f4;
     transform: translateY(-1px);
   }
 
@@ -1960,13 +2313,13 @@
 
   .set-title {
     font-size: 1.05rem;
-    color: #2F1822;
+    color: #2f1822;
   }
 
   .btn-enter-set {
     font-size: 0.82rem;
     font-weight: 700;
-    color: #8C1D40;
+    color: #8c1d40;
   }
 
   .or-divider {
@@ -1976,29 +2329,29 @@
   }
 
   .or-divider::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 50%;
     left: 0;
     right: 0;
     height: 1px;
-    background: #E7D6DC;
+    background: #e7d6dc;
     z-index: 1;
   }
 
   .or-divider span {
     position: relative;
     z-index: 2;
-    background: #FFFDFB;
+    background: #fffdfb;
     padding: 0 0.8rem;
     font-size: 0.8rem;
-    color: #9C858F;
+    color: #9c858f;
     text-transform: uppercase;
   }
 
   .tenant-banner {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 12px;
     padding: 0.75rem 1.25rem;
     display: flex;
@@ -2018,14 +2371,14 @@
 
   .wedding-badge {
     font-size: 0.98rem;
-    color: #8C1D40;
+    color: #8c1d40;
   }
 
   .tenant-tag {
     font-size: 0.72rem;
-    background: #E6F4EA;
-    color: #1E7E34;
-    border: 1px solid #CEEAD6;
+    background: #e6f4ea;
+    color: #1e7e34;
+    border: 1px solid #ceead6;
     padding: 0.15rem 0.55rem;
     border-radius: 12px;
     font-weight: 600;
@@ -2039,7 +2392,7 @@
 
   .user-email {
     font-size: 0.85rem;
-    color: #5C4A52;
+    color: #5c4a52;
   }
 
   .btn-sm {
@@ -2048,9 +2401,9 @@
   }
 
   .btn-logout {
-    background: #FCE8E6;
-    color: #C5221F;
-    border: 1px solid #F87171;
+    background: #fce8e6;
+    color: #c5221f;
+    border: 1px solid #f87171;
     padding: 0.35rem 0.75rem;
     border-radius: 6px;
     font-size: 0.8rem;
@@ -2059,9 +2412,9 @@
   }
 
   .auth-error-alert {
-    background: #FCE8E6;
-    color: #C5221F;
-    border: 1px solid #F87171;
+    background: #fce8e6;
+    color: #c5221f;
+    border: 1px solid #f87171;
     padding: 0.6rem 1rem;
     border-radius: 8px;
     font-size: 0.85rem;
@@ -2079,11 +2432,11 @@
   .gold-line {
     height: 1px;
     width: 60px;
-    background: linear-gradient(90deg, transparent, #C89B3C, transparent);
+    background: linear-gradient(90deg, transparent, #c89b3c, transparent);
   }
 
   .diamond {
-    color: #C89B3C;
+    color: #c89b3c;
     font-size: 0.7rem;
   }
 
@@ -2104,21 +2457,21 @@
   }
 
   .active-group-btn {
-    background: #FFF0F4 !important;
-    border-color: #8C1D40 !important;
-    color: #8C1D40 !important;
+    background: #fff0f4 !important;
+    border-color: #8c1d40 !important;
+    color: #8c1d40 !important;
   }
 
   .title-group h1 {
     font-size: 2.5rem;
     font-weight: 600;
-    color: #8C1D40;
+    color: #8c1d40;
     margin: 0 0 0.4rem 0;
     letter-spacing: -0.02em;
   }
 
   .subtitle {
-    color: #5C4A52;
+    color: #5c4a52;
     font-size: 0.98rem;
     margin: 0;
     max-width: 580px;
@@ -2126,9 +2479,9 @@
   }
 
   .btn-primary {
-    background-color: #8C1D40;
-    color: #FFFDFB;
-    border: 1px solid #8C1D40;
+    background-color: #8c1d40;
+    color: #fffdfb;
+    border: 1px solid #8c1d40;
     padding: 0.75rem 1.4rem;
     border-radius: 10px;
     font-weight: 600;
@@ -2150,8 +2503,8 @@
 
   .btn-secondary {
     background-color: transparent;
-    color: #5C4A52;
-    border: 1px solid #E7D6DC;
+    color: #5c4a52;
+    border: 1px solid #e7d6dc;
     padding: 0.65rem 1.1rem;
     border-radius: 8px;
     font-weight: 600;
@@ -2164,9 +2517,9 @@
   }
 
   .btn-secondary:hover {
-    background-color: #FFF8F3;
-    color: #8C1D40;
-    border-color: #C44569;
+    background-color: #fff8f3;
+    color: #8c1d40;
+    border-color: #c44569;
   }
 
   /* Status Badges */
@@ -2182,27 +2535,27 @@
   }
 
   .status-confirmado {
-    background-color: #E6F4EA;
-    color: #1E7E34;
-    border-color: #CEEAD6;
+    background-color: #e6f4ea;
+    color: #1e7e34;
+    border-color: #ceead6;
   }
 
   .status-convite-entregue {
-    background-color: #F3E8FF;
-    color: #6B21A8;
-    border-color: #E9D5FF;
+    background-color: #f3e8ff;
+    color: #6b21a8;
+    border-color: #e9d5ff;
   }
 
   .status-pendente {
-    background-color: #FEF3D6;
-    color: #B45309;
-    border-color: #FDE68A;
+    background-color: #fef3d6;
+    color: #b45309;
+    border-color: #fde68a;
   }
 
   .status-não-vai {
-    background-color: #FCE8E6;
-    color: #C5221F;
-    border-color: #F87171;
+    background-color: #fce8e6;
+    color: #c5221f;
+    border-color: #f87171;
   }
 
   /* Metric Cards */
@@ -2214,15 +2567,17 @@
   }
 
   .metric-card {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     padding: 1.2rem 1.4rem;
     border-radius: 12px;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
     box-shadow: 0 2px 8px rgba(47, 24, 34, 0.03);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
   .metric-card:hover {
@@ -2232,7 +2587,7 @@
 
   .metric-label {
     font-size: 0.82rem;
-    color: #7A6670;
+    color: #7a6670;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -2241,24 +2596,24 @@
   .metric-value {
     font-size: 1.8rem;
     font-weight: 700;
-    color: #8C1D40;
-    font-family: 'Playfair Display', Georgia, serif;
+    color: #8c1d40;
+    font-family: "Playfair Display", Georgia, serif;
   }
 
   .metric-card.confirmados .metric-value {
-    color: #1E7E34;
+    color: #1e7e34;
   }
 
   .metric-card.entregues .metric-value {
-    color: #6B21A8;
+    color: #6b21a8;
   }
 
   .metric-card.pendentes .metric-value {
-    color: #B45309;
+    color: #b45309;
   }
 
   .metric-card.ausentes .metric-value {
-    color: #C5221F;
+    color: #c5221f;
   }
 
   /* Drag and Drop Styles */
@@ -2271,7 +2626,7 @@
 
   .drag-handle {
     cursor: grab;
-    color: #A38F98;
+    color: #a38f98;
     font-size: 0.95rem;
     user-select: none;
   }
@@ -2282,7 +2637,7 @@
 
   .row-dragging {
     opacity: 0.4;
-    background-color: #FFF0F4 !important;
+    background-color: #fff0f4 !important;
   }
 
   /* Tag Grouping Sections */
@@ -2293,22 +2648,22 @@
   }
 
   .tag-group-section {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 12px;
     overflow: hidden;
   }
 
   .tag-group-header {
-    background: #FFF8F3;
+    background: #fff8f3;
     padding: 0.75rem 1.25rem;
-    border-bottom: 1px solid #E7D6DC;
+    border-bottom: 1px solid #e7d6dc;
   }
 
   .tag-group-title {
     font-size: 0.95rem;
     font-weight: 700;
-    color: #8C1D40;
+    color: #8c1d40;
   }
 
   /* CSV Modal Styles */
@@ -2326,11 +2681,11 @@
   }
 
   .file-upload-box {
-    border: 2px dashed #E7D6DC;
+    border: 2px dashed #e7d6dc;
     border-radius: 14px;
     padding: 3rem 1.5rem;
     text-align: center;
-    background: #FFF8F3;
+    background: #fff8f3;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2339,13 +2694,13 @@
 
   .file-upload-box h3 {
     margin: 0;
-    color: #8C1D40;
+    color: #8c1d40;
     font-size: 1.3rem;
   }
 
   .file-upload-box p {
     margin: 0;
-    color: #7A6670;
+    color: #7a6670;
     font-size: 0.9rem;
   }
 
@@ -2355,13 +2710,13 @@
 
   .csv-step-header h3 {
     margin: 0 0 0.25rem 0;
-    color: #8C1D40;
+    color: #8c1d40;
     font-size: 1.25rem;
   }
 
   .csv-step-header p {
     margin: 0;
-    color: #5C4A52;
+    color: #5c4a52;
     font-size: 0.88rem;
   }
 
@@ -2375,8 +2730,8 @@
   }
 
   .csv-col-mapping-card {
-    background: #FFF8F3;
-    border: 1px solid #E7D6DC;
+    background: #fff8f3;
+    border: 1px solid #e7d6dc;
     border-radius: 10px;
     padding: 0.75rem 1rem;
     display: flex;
@@ -2393,22 +2748,22 @@
 
   .col-name {
     font-size: 0.9rem;
-    color: #2F1822;
+    color: #2f1822;
   }
 
   .col-sample {
     font-size: 0.78rem;
-    color: #7A6670;
+    color: #7a6670;
     font-style: italic;
   }
 
   .col-role-select select {
     padding: 0.45rem 0.75rem;
-    border: 1px solid #E7D6DC;
+    border: 1px solid #e7d6dc;
     border-radius: 8px;
-    background: #FFFDFB;
+    background: #fffdfb;
     font-size: 0.85rem;
-    color: #8C1D40;
+    color: #8c1d40;
     font-weight: 600;
     outline: none;
   }
@@ -2416,7 +2771,7 @@
   .csv-preview-table-container {
     max-height: 280px;
     overflow-y: auto;
-    border: 1px solid #E7D6DC;
+    border: 1px solid #e7d6dc;
     border-radius: 10px;
   }
 
@@ -2428,7 +2783,7 @@
 
   .preview-more-info {
     font-size: 0.8rem;
-    color: #7A6670;
+    color: #7a6670;
     text-align: center;
     margin: 0;
   }
@@ -2460,24 +2815,24 @@
     left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    color: #9C858F;
+    color: #9c858f;
     pointer-events: none;
   }
 
   .search-box input {
     width: 100%;
     padding: 0.75rem 2.6rem 0.75rem 2.6rem;
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 10px;
     font-size: 0.92rem;
-    color: #2F1822;
+    color: #2f1822;
     outline: none;
     transition: all 0.2s ease;
   }
 
   .search-box input:focus {
-    border-color: #C44569;
+    border-color: #c44569;
     box-shadow: 0 0 0 3px rgba(196, 69, 105, 0.12);
   }
 
@@ -2488,7 +2843,7 @@
     transform: translateY(-50%);
     background: none;
     border: none;
-    color: #9C858F;
+    color: #9c858f;
     cursor: pointer;
     font-size: 0.9rem;
   }
@@ -2500,9 +2855,9 @@
   }
 
   .pill {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
-    color: #5C4A52;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
+    color: #5c4a52;
     padding: 0.55rem 0.9rem;
     border-radius: 20px;
     font-size: 0.85rem;
@@ -2512,20 +2867,20 @@
   }
 
   .pill:hover {
-    border-color: #C44569;
-    color: #8C1D40;
+    border-color: #c44569;
+    color: #8c1d40;
   }
 
   .pill.active {
-    background: #8C1D40;
-    border-color: #8C1D40;
-    color: #FFFDFB;
+    background: #8c1d40;
+    border-color: #8c1d40;
+    color: #fffdfb;
     font-weight: 600;
   }
 
   .tag-filter-strip {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 12px;
     padding: 0.85rem 1.1rem;
     margin-bottom: 1rem;
@@ -2544,7 +2899,7 @@
   .tag-strip-label {
     font-size: 0.82rem;
     font-weight: 700;
-    color: #8C1D40;
+    color: #8c1d40;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -2552,7 +2907,7 @@
   .btn-reset-tags {
     background: none;
     border: none;
-    color: #C44569;
+    color: #c44569;
     font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
@@ -2566,9 +2921,9 @@
   }
 
   .tag-pill-btn {
-    background: #FFF8F3;
-    border: 1px solid #E7D6DC;
-    color: #5C4A52;
+    background: #fff8f3;
+    border: 1px solid #e7d6dc;
+    color: #5c4a52;
     padding: 0.35rem 0.75rem;
     border-radius: 20px;
     font-size: 0.8rem;
@@ -2578,14 +2933,14 @@
   }
 
   .tag-pill-btn:hover {
-    border-color: #C44569;
-    color: #8C1D40;
+    border-color: #c44569;
+    color: #8c1d40;
   }
 
   .tag-pill-btn.active {
-    background: #8C1D40;
-    border-color: #8C1D40;
-    color: #FFFDFB;
+    background: #8c1d40;
+    border-color: #8c1d40;
+    color: #fffdfb;
     font-weight: 600;
     box-shadow: 0 2px 8px rgba(140, 29, 64, 0.2);
   }
@@ -2594,13 +2949,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #FFF8F3;
-    border: 1px solid #E7D6DC;
+    background: #fff8f3;
+    border: 1px solid #e7d6dc;
     padding: 0.65rem 1rem;
     border-radius: 10px;
     margin-bottom: 1.25rem;
     font-size: 0.88rem;
-    color: #5C4A52;
+    color: #5c4a52;
   }
 
   .counter-info {
@@ -2611,9 +2966,9 @@
   }
 
   .active-filters-tag {
-    background: #FFF0F4;
-    color: #8C1D40;
-    border: 1px solid #F3CFD9;
+    background: #fff0f4;
+    color: #8c1d40;
+    border: 1px solid #f3cfd9;
     padding: 0.2rem 0.6rem;
     border-radius: 6px;
     font-size: 0.78rem;
@@ -2623,7 +2978,7 @@
   .btn-reset-filters {
     background: none;
     border: none;
-    color: #C44569;
+    color: #c44569;
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
@@ -2639,8 +2994,8 @@
     right: 0;
     top: calc(100% + 6px);
     width: 280px;
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(47, 24, 34, 0.12);
     padding: 1rem;
@@ -2653,16 +3008,16 @@
     align-items: center;
     font-size: 0.85rem;
     font-weight: 700;
-    color: #8C1D40;
+    color: #8c1d40;
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #F3E8EC;
+    border-bottom: 1px solid #f3e8ec;
   }
 
   .close-popover {
     background: none;
     border: none;
-    color: #7A6670;
+    color: #7a6670;
     cursor: pointer;
   }
 
@@ -2680,12 +3035,12 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
-    color: #4A3B42;
+    color: #4a3b42;
     cursor: pointer;
   }
 
   .col-checkbox-item input {
-    accent-color: #8C1D40;
+    accent-color: #8c1d40;
   }
 
   .btn-delete-col {
@@ -2699,19 +3054,19 @@
     display: flex;
     gap: 0.4rem;
     padding-top: 0.6rem;
-    border-top: 1px solid #F3E8EC;
+    border-top: 1px solid #f3e8ec;
   }
 
   .add-column-form input {
     flex: 1;
     padding: 0.4rem 0.6rem;
     font-size: 0.8rem;
-    border: 1px solid #E7D6DC;
+    border: 1px solid #e7d6dc;
     border-radius: 6px;
   }
 
   .btn-add-col {
-    background: #8C1D40;
+    background: #8c1d40;
     color: white;
     border: none;
     padding: 0.4rem 0.7rem;
@@ -2722,8 +3077,8 @@
   }
 
   .table-container {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 14px;
     overflow-x: auto;
     box-shadow: 0 4px 20px rgba(47, 24, 34, 0.04);
@@ -2737,14 +3092,14 @@
   }
 
   .guest-table th {
-    background: #FFF8F3;
-    color: #7A6670;
+    background: #fff8f3;
+    color: #7a6670;
     font-size: 0.78rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding: 1rem 1.25rem;
-    border-bottom: 1px solid #E7D6DC;
+    border-bottom: 1px solid #e7d6dc;
   }
 
   .col-num-header,
@@ -2756,9 +3111,9 @@
   .row-number {
     font-size: 0.82rem;
     font-weight: 700;
-    color: #9C858F;
-    background: #FFF8F3;
-    border: 1px solid #E7D6DC;
+    color: #9c858f;
+    background: #fff8f3;
+    border: 1px solid #e7d6dc;
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -2769,14 +3124,14 @@
 
   .guest-table td {
     padding: 1.1rem 1.25rem;
-    border-bottom: 1px solid #F3E8EC;
+    border-bottom: 1px solid #f3e8ec;
     vertical-align: middle;
-    color: #2F1822;
+    color: #2f1822;
     font-size: 0.92rem;
   }
 
   .row-acompanhante td {
-    background-color: #FFFDF9;
+    background-color: #fffdf9;
   }
 
   .name-info {
@@ -2789,7 +3144,7 @@
 
   .guest-name {
     font-weight: 600;
-    color: #2F1822;
+    color: #2f1822;
     font-size: 0.92rem;
     word-break: break-word;
     overflow-wrap: anywhere;
@@ -2798,7 +3153,7 @@
 
   .subtag-badge {
     font-size: 0.7rem;
-    color: #C44569;
+    color: #c44569;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -2812,12 +3167,12 @@
 
   .phone {
     font-weight: 500;
-    color: #4A3B42;
+    color: #4a3b42;
   }
 
   .email {
     font-size: 0.8rem;
-    color: #8C7B83;
+    color: #8c7b83;
   }
 
   .tags-wrapper {
@@ -2827,9 +3182,9 @@
   }
 
   .tag-pill {
-    background: #FFF0F4;
-    color: #8C1D40;
-    border: 1px solid #F3CFD9;
+    background: #fff0f4;
+    color: #8c1d40;
+    border: 1px solid #f3cfd9;
     padding: 0.25rem 0.6rem;
     border-radius: 6px;
     font-size: 0.75rem;
@@ -2847,9 +3202,9 @@
   }
 
   .companion-badge.secondary {
-    background: #FFF0F4;
-    border: 1px dashed #F3CFD9;
-    color: #8C1D40;
+    background: #fff0f4;
+    border: 1px dashed #f3cfd9;
+    color: #8c1d40;
   }
 
   .custom-cell-input {
@@ -2860,13 +3215,13 @@
     border-radius: 6px;
     background: transparent;
     font-size: 0.88rem;
-    color: #2F1822;
+    color: #2f1822;
   }
 
   .custom-cell-input:hover,
   .custom-cell-input:focus {
-    background: #FFFDFB;
-    border-color: #E7D6DC;
+    background: #fffdfb;
+    border-color: #e7d6dc;
     outline: none;
   }
 
@@ -2881,21 +3236,21 @@
     border: 1px solid transparent;
     padding: 0.45rem;
     border-radius: 8px;
-    color: #7A6670;
+    color: #7a6670;
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .edit-btn:hover {
-    background-color: #FFF0F4;
-    color: #8C1D40;
-    border-color: #F3CFD9;
+    background-color: #fff0f4;
+    color: #8c1d40;
+    border-color: #f3cfd9;
   }
 
   .delete-btn:hover {
-    background-color: #FCE8E6;
-    color: #C5221F;
-    border-color: #F87171;
+    background-color: #fce8e6;
+    color: #c5221f;
+    border-color: #f87171;
   }
 
   .text-right {
@@ -2913,12 +3268,12 @@
 
   .empty-state h3 {
     margin: 0;
-    color: #8C1D40;
+    color: #8c1d40;
     font-size: 1.3rem;
   }
 
   .empty-state p {
-    color: #7A6670;
+    color: #7a6670;
     margin: 0 0 1rem 0;
   }
 
@@ -2935,8 +3290,8 @@
   }
 
   .modal-card {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 16px;
     width: 100%;
     max-width: 560px;
@@ -2946,8 +3301,14 @@
   }
 
   @keyframes modalSlide {
-    from { opacity: 0; transform: translateY(12px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   .modal-header {
@@ -2955,29 +3316,29 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid #E7D6DC;
-    background: #FFF8F3;
+    border-bottom: 1px solid #e7d6dc;
+    background: #fff8f3;
   }
 
   .modal-header h2 {
     margin: 0;
     font-size: 1.4rem;
-    color: #8C1D40;
+    color: #8c1d40;
   }
 
   .modal-close {
     background: none;
     border: none;
     font-size: 1.2rem;
-    color: #7A6670;
+    color: #7a6670;
     cursor: pointer;
     padding: 0.2rem 0.5rem;
     border-radius: 6px;
   }
 
   .modal-close:hover {
-    color: #8C1D40;
-    background: #E7D6DC;
+    color: #8c1d40;
+    background: #e7d6dc;
   }
 
   .modal-form {
@@ -3000,24 +3361,24 @@
   .label-title {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #4A3B42;
+    color: #4a3b42;
   }
 
   .form-group input,
   .form-group select {
     padding: 0.7rem 0.9rem;
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 8px;
     font-size: 0.92rem;
-    color: #2F1822;
+    color: #2f1822;
     outline: none;
     font-family: inherit;
   }
 
   .form-group input:focus,
   .form-group select:focus {
-    border-color: #C44569;
+    border-color: #c44569;
     box-shadow: 0 0 0 3px rgba(196, 69, 105, 0.12);
   }
 
@@ -3027,9 +3388,9 @@
   }
 
   .companion-config-box {
-    background: #FFF8F3;
+    background: #fff8f3;
     padding: 1rem;
-    border: 1px solid #E7D6DC;
+    border: 1px solid #e7d6dc;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
@@ -3042,12 +3403,12 @@
     gap: 0.6rem;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #8C1D40;
+    color: #8c1d40;
     cursor: pointer;
   }
 
   .checkbox-label input {
-    accent-color: #8C1D40;
+    accent-color: #8c1d40;
     width: 18px;
     height: 18px;
   }
@@ -3064,15 +3425,15 @@
     flex-wrap: wrap;
     gap: 0.4rem;
     padding: 0.6rem;
-    background: #FFF8F3;
-    border: 1px solid #E7D6DC;
+    background: #fff8f3;
+    border: 1px solid #e7d6dc;
     border-radius: 8px;
   }
 
   .tag-toggle-btn {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
-    color: #5C4A52;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
+    color: #5c4a52;
     padding: 0.35rem 0.75rem;
     border-radius: 20px;
     font-size: 0.78rem;
@@ -3081,9 +3442,9 @@
   }
 
   .tag-toggle-btn.selected {
-    background: #8C1D40;
+    background: #8c1d40;
     color: white;
-    border-color: #8C1D40;
+    border-color: #8c1d40;
   }
 
   .add-tag-row {
@@ -3107,7 +3468,7 @@
 
   .tag-manager-help {
     font-size: 0.85rem;
-    color: #7A6670;
+    color: #7a6670;
     margin: 0;
     line-height: 1.4;
   }
@@ -3118,10 +3479,10 @@
     gap: 0.6rem;
     max-height: 260px;
     overflow-y: auto;
-    border: 1px solid #E7D6DC;
+    border: 1px solid #e7d6dc;
     border-radius: 10px;
     padding: 0.8rem;
-    background: #FFF8F3;
+    background: #fff8f3;
   }
 
   .tag-manage-item {
@@ -3130,8 +3491,8 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.4rem 0.6rem;
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
+    background: #fffdfb;
+    border: 1px solid #e7d6dc;
     border-radius: 8px;
   }
 
@@ -3150,19 +3511,19 @@
   }
 
   .btn-icon-tag:hover {
-    background: #F3E8EC;
+    background: #f3e8ec;
   }
 
   .tag-edit-input {
     flex: 1;
     padding: 0.3rem 0.5rem;
     font-size: 0.85rem;
-    border: 1px solid #C44569;
+    border: 1px solid #c44569;
     border-radius: 6px;
   }
 
   .btn-save-tag {
-    background: #1E7E34;
+    background: #1e7e34;
     color: white;
     border: none;
     padding: 0.3rem 0.6rem;
@@ -3173,7 +3534,7 @@
   }
 
   .btn-cancel-tag {
-    background: #7A6670;
+    background: #7a6670;
     color: white;
     border: none;
     padding: 0.3rem 0.6rem;
@@ -3190,7 +3551,7 @@
   .add-tag-manager-form input {
     flex: 1;
     padding: 0.6rem 0.8rem;
-    border: 1px solid #E7D6DC;
+    border: 1px solid #e7d6dc;
     border-radius: 8px;
     font-size: 0.88rem;
   }
@@ -3201,7 +3562,7 @@
     gap: 0.75rem;
     margin-top: 0.5rem;
     padding-top: 1rem;
-    border-top: 1px solid #F3E8EC;
+    border-top: 1px solid #f3e8ec;
   }
 
   @media (max-width: 768px) {
