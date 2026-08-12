@@ -9,7 +9,7 @@
     nome: string;
     contato: string;
     email: string;
-    confirmacao: 'Confirmado' | 'Pendente' | 'Não vai';
+    confirmacao: 'Confirmado' | 'Pendente' | 'Convite entregue' | 'Não vai';
     tags: string[];
     isAcompanhante: boolean;
     convidadoPrincipalId?: string; // ID do Convidado Principal
@@ -61,19 +61,16 @@
   ]);
 
   // Lista global de tags disponíveis para uso
-  let tagsDisponiveis = $state<string[]>([
-    'Padrinhos',
-    'Família da Noiva',
-    'Família do Noivo',
-    'Amigos da Noiva',
-    'Amigos do Noivo',
-    'Trabalho',
-    'VIP',
-    'Faculdade'
-  ]);
+  let tagsDisponiveis = $state<string[]>([]);
 
   // Lista de Convidados Reativa
   let convidados = $state<Convidado[]>([]);
+
+  // Estado de Drag & Drop
+  let draggedIndex = $state<number | null>(null);
+
+  // Estado de Agrupamento por Tags
+  let isAgrupadoPorTag = $state(false);
 
   // Estado de busca e filtros
   let busca = $state('');
@@ -98,8 +95,8 @@
   let formNome = $state('');
   let formContato = $state('');
   let formEmail = $state('');
-  let formConfirmacao = $state<'Confirmado' | 'Pendente' | 'Não vai'>('Pendente');
-  let formTags = $state<string[]>(['Amigos da Noiva']);
+  let formConfirmacao = $state<'Confirmado' | 'Pendente' | 'Convite entregue' | 'Não vai'>('Pendente');
+  let formTags = $state<string[]>([]);
   let formIsAcompanhante = $state(false);
   let formConvidadoPrincipalId = $state<string>('');
   let formCustomFields = $state<Record<string, string>>({});
@@ -145,12 +142,18 @@
         nome: r.nome,
         contato: r.contato || '',
         email: r.email || '',
-        confirmacao: r.confirmacao || 'Pendente',
+        confirmacao: (r.confirmacao as any) || 'Pendente',
         tags: r.tags || [],
         isAcompanhante: r.is_acompanhante || false,
         convidadoPrincipalId: r.convidado_principal || undefined,
         customFields: r.custom_fields || {}
       }));
+
+      // Extrai dinamicamente todas as tags ativas dos convidados do banco
+      const tagsDoBanco = Array.from(new Set(convidados.flatMap(c => c.tags))).filter(Boolean);
+      if (tagsDoBanco.length > 0) {
+        tagsDisponiveis = tagsDoBanco;
+      }
     } catch (e) {
       console.warn('Erro ao carregar convidados do PocketBase:', e);
       convidados = [];
@@ -191,6 +194,45 @@
   function preencherTeste() {
     loginEmail = 'user@teste.com';
     loginPassword = 'senha123456';
+  }
+
+  /* ----------------------------------------------------
+     DRAG AND DROP REORDERING
+  ---------------------------------------------------- */
+  function handleDragStart(e: DragEvent, index: number) {
+    draggedIndex = index;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  function handleDrop(e: DragEvent, targetIndex: number) {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      draggedIndex = null;
+      return;
+    }
+
+    const reordered = [...convidados];
+    const [movedItem] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, movedItem);
+
+    convidados = reordered;
+    draggedIndex = null;
+  }
+
+  /* ----------------------------------------------------
+     ORDENAÇÃO ALFABÉTICA (A-Z)
+  ---------------------------------------------------- */
+  function ordenarAlfaAZ() {
+    convidados = [...convidados].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   }
 
   /* ----------------------------------------------------
@@ -303,7 +345,7 @@
       let nome = '';
       let contato = '';
       let email = '';
-      let confirmacao: 'Confirmado' | 'Pendente' | 'Não vai' = 'Pendente';
+      let confirmacao: 'Confirmado' | 'Pendente' | 'Convite entregue' | 'Não vai' = 'Pendente';
       const extractedTags: string[] = [];
 
       row.forEach((cellVal, idx) => {
@@ -320,7 +362,8 @@
           email = val;
         } else if (colConfig.role === 'confirmacao') {
           const vLower = val.toLowerCase();
-          if (vLower.includes('confir') || vLower === 'sim') confirmacao = 'Confirmado';
+          if (vLower.includes('entregue')) confirmacao = 'Convite entregue';
+          else if (vLower.includes('confir') || vLower === 'sim') confirmacao = 'Confirmado';
           else if (vLower.includes('não') || vLower.includes('nao')) confirmacao = 'Não vai';
           else confirmacao = 'Pendente';
         } else if (colConfig.role === 'tag') {
@@ -333,8 +376,8 @@
 
       return {
         nome: nome || 'Sem Nome',
-        contato: contato || 'Não informado',
-        email: email || '-',
+        contato: contato || '',
+        email: email || '',
         confirmacao,
         tags: extractedTags.length > 0 ? extractedTags : ['Geral']
       };
@@ -355,9 +398,8 @@
       const novasTagsParaAdicionar = new Set<string>();
 
       for (const item of csvPreviewConvidados) {
-        // Valida se o email é um formato válido antes de enviar ao PocketBase
         const emailValido = (item.email && item.email !== '-' && item.email.includes('@')) ? item.email.trim() : '';
-        const contatoValido = (item.contato && item.contato !== 'Não informado') ? item.contato.trim() : '';
+        const contatoValido = item.contato ? item.contato.trim() : '';
 
         const pbRecord = await pb.collection('convidados').create({
           casamento: casamentoId,
@@ -426,8 +468,35 @@
     })
   );
 
+  // Grupos por Tag para modo Agrupado
+  let gruposDeTags = $derived.by(() => {
+    if (!isAgrupadoPorTag) return [];
+
+    const map = new Map<string, Convidado[]>();
+
+    convidadosFiltrados.forEach(c => {
+      if (c.tags.length === 0) {
+        const list = map.get('Sem Tag') || [];
+        list.push(c);
+        map.set('Sem Tag', list);
+      } else {
+        c.tags.forEach(t => {
+          const list = map.get(t) || [];
+          list.push(c);
+          map.set(t, list);
+        });
+      }
+    });
+
+    return Array.from(map.entries()).map(([tag, list]) => ({
+      tag,
+      convidados: list
+    }));
+  });
+
   let totalConvidados = $derived(convidados.length);
   let totalConfirmados = $derived(convidados.filter(c => c.confirmacao === 'Confirmado').length);
+  let totalEntregues = $derived(convidados.filter(c => c.confirmacao === 'Convite entregue').length);
   let totalPendentes = $derived(convidados.filter(c => c.confirmacao === 'Pendente').length);
   let totalNaoVao = $derived(convidados.filter(c => c.confirmacao === 'Não vai').length);
 
@@ -514,12 +583,14 @@
     tagNovoNomeEdicao = tag;
   }
 
-  function salvarEdicaoTag(tagAntiga: string) {
+  async function salvarEdicaoTag(tagAntiga: string) {
     const novoNomeTag = tagNovoNomeEdicao.trim();
     if (!novoNomeTag || novoNomeTag === tagAntiga) {
       tagEmEdicao = null;
       return;
     }
+
+    const convidadosComTag = convidados.filter(c => c.tags.includes(tagAntiga));
 
     tagsDisponiveis = tagsDisponiveis.map(t => t === tagAntiga ? novoNomeTag : t);
     convidados = convidados.map(c => ({
@@ -529,10 +600,19 @@
     formTags = formTags.map(t => t === tagAntiga ? novoNomeTag : t);
     tagsFiltroAtivas = tagsFiltroAtivas.map(t => t === tagAntiga ? novoNomeTag : t);
     tagEmEdicao = null;
+
+    for (const c of convidadosComTag) {
+      const novasTags = c.tags.map(t => t === tagAntiga ? novoNomeTag : t);
+      try {
+        await pb.collection('convidados').update(c.id, { tags: novasTags });
+      } catch (e) {}
+    }
   }
 
-  function handleExcluirTag(tagParaExcluir: string) {
+  async function handleExcluirTag(tagParaExcluir: string) {
     if (confirm(`Tem certeza que deseja excluir a tag "${tagParaExcluir}" de todo o sistema?`)) {
+      const convidadosComTag = convidados.filter(c => c.tags.includes(tagParaExcluir));
+
       tagsDisponiveis = tagsDisponiveis.filter(t => t !== tagParaExcluir);
       convidados = convidados.map(c => ({
         ...c,
@@ -540,6 +620,13 @@
       }));
       formTags = formTags.filter(t => t !== tagParaExcluir);
       tagsFiltroAtivas = tagsFiltroAtivas.filter(t => t !== tagParaExcluir);
+
+      for (const c of convidadosComTag) {
+        const novasTags = c.tags.filter(t => t !== tagParaExcluir);
+        try {
+          await pb.collection('convidados').update(c.id, { tags: novasTags });
+        } catch (e) {}
+      }
     }
   }
 
@@ -584,7 +671,7 @@
     formContato = '';
     formEmail = '';
     formConfirmacao = 'Pendente';
-    formTags = ['Amigos da Noiva'];
+    formTags = [];
     formIsAcompanhante = false;
     formConvidadoPrincipalId = '';
     formCustomFields = {};
@@ -619,8 +706,8 @@
             return {
               ...c,
               nome: formNome.trim(),
-              contato: formContato.trim() || 'Não informado',
-              email: formEmail.trim() || '-',
+              contato: formContato.trim(),
+              email: formEmail.trim(),
               confirmacao: formConfirmacao,
               tags: formTags.length > 0 ? [...formTags] : ['Geral'],
               isAcompanhante: formIsAcompanhante,
@@ -650,8 +737,8 @@
         const novoRegistro: Convidado = {
           id: pbRecord.id,
           nome: formNome.trim(),
-          contato: formContato.trim() || 'Não informado',
-          email: formEmail.trim() || '-',
+          contato: formContato.trim(),
+          email: formEmail.trim(),
           confirmacao: formConfirmacao,
           tags: formTags.length > 0 ? [...formTags] : ['Geral'],
           isAcompanhante: formIsAcompanhante,
@@ -679,7 +766,7 @@
     }
   }
 
-  async function handleMudarStatus(id: string, novoStatus: 'Confirmado' | 'Pendente' | 'Não vai') {
+  async function handleMudarStatus(id: string, novoStatus: 'Confirmado' | 'Pendente' | 'Convite entregue' | 'Não vai') {
     try {
       await pb.collection('convidados').update(id, { confirmacao: novoStatus });
       convidados = convidados.map(c => c.id === id ? { ...c, confirmacao: novoStatus } : c);
@@ -917,11 +1004,25 @@
       <div class="title-group">
         <h1>Convidados</h1>
         <p class="subtitle">
-          Gerencie sua lista de convidados para o <strong>{casamentoState.casamentoAtivo?.titulo || 'seu casamento'}</strong> com acompanhantes vinculados e sincronização no PocketBase.
+          Gerencie sua lista de convidados para o <strong>{casamentoState.casamentoAtivo?.titulo || 'seu casamento'}</strong> com acompanhantes vinculados e reordenação drag and drop.
         </p>
       </div>
 
       <div class="header-actions">
+        <!-- Botão de Ordenar A-Z -->
+        <button class="btn-secondary" onclick={ordenarAlfaAZ} title="Ordenar lista alfabeticamente por Nome">
+          🔤 Ordenar (A-Z)
+        </button>
+
+        <!-- Botão de Agrupar por Tags -->
+        <button
+          class="btn-secondary {isAgrupadoPorTag ? 'active-group-btn' : ''}"
+          onclick={() => isAgrupadoPorTag = !isAgrupadoPorTag}
+          title="Agrupar visualmente a tabela por categorias de Tags"
+        >
+          🏷️ {isAgrupadoPorTag ? 'Desagrupar Tags' : 'Agrupar por Tags'}
+        </button>
+
         <!-- Botão de Importar CSV -->
         <button class="btn-secondary" onclick={() => { isCsvModalOpen = true; csvStep = 'file'; }}>
           📥 Importar CSV
@@ -937,6 +1038,7 @@
       </div>
     </header>
 
+    <!-- Metrics Cards Atualizados -->
     <div class="metrics-grid">
       <div class="metric-card">
         <span class="metric-label">Total de Convidados</span>
@@ -945,6 +1047,10 @@
       <div class="metric-card confirmados">
         <span class="metric-label">Confirmados</span>
         <span class="metric-value">{totalConfirmados}</span>
+      </div>
+      <div class="metric-card entregues">
+        <span class="metric-label">Convites Entregues</span>
+        <span class="metric-value">{totalEntregues}</span>
       </div>
       <div class="metric-card pendentes">
         <span class="metric-label">Pendentes</span>
@@ -956,6 +1062,7 @@
       </div>
     </div>
 
+    <!-- Toolbar e Filtros por Status -->
     <div class="toolbar">
       <div class="search-box">
         <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -986,6 +1093,12 @@
             onclick={() => filtroStatus = 'Confirmado'}
           >
             Confirmados ({totalConfirmados})
+          </button>
+          <button
+            class="pill {filtroStatus === 'Convite entregue' ? 'active' : ''}"
+            onclick={() => filtroStatus = 'Convite entregue'}
+          >
+            Convite entregue ({totalEntregues})
           </button>
           <button
             class="pill {filtroStatus === 'Pendente' ? 'active' : ''}"
@@ -1062,6 +1175,7 @@
       </div>
     </div>
 
+    <!-- Barra de Filtros Interativos por Tag -->
     <div class="tag-filter-strip">
       <div class="tag-strip-header">
         <span class="tag-strip-label">🏷️ Filtrar por Tag:</span>
@@ -1105,6 +1219,7 @@
       </div>
     </div>
 
+    <!-- Tabela Dinâmica de Convidados com Drag and Drop & Agrupamento por Tags -->
     <div class="table-container">
       {#if convidadosFiltrados.length === 0}
         <div class="empty-state">
@@ -1121,7 +1236,117 @@
             </button>
           {/if}
         </div>
+
+      {:else if isAgrupadoPorTag}
+        <!-- MODO AGRUPADO POR TAGS -->
+        <div class="tag-grouped-container">
+          {#each gruposDeTags as grupo}
+            <div class="tag-group-section">
+              <div class="tag-group-header">
+                <span class="tag-group-title">🏷️ {grupo.tag} ({grupo.convidados.length})</span>
+              </div>
+
+              <table class="guest-table">
+                <thead>
+                  <tr>
+                    <th class="col-num-header">#</th>
+                    <th>Nome</th>
+                    {#each colunas as col}
+                      {#if col.visivel}
+                        <th class={col.id === 'acoes' ? 'text-right' : ''}>{col.label}</th>
+                      {/if}
+                    {/each}
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each grupo.convidados as convidado, index (convidado.id)}
+                    <tr class={convidado.isAcompanhante ? 'row-acompanhante' : ''}>
+                      <td class="col-num">
+                        <span class="row-number">{index + 1}</span>
+                      </td>
+                      <td class="col-nome">
+                        <div class="name-info">
+                          <span class="guest-name">{convidado.nome}</span>
+                          {#if convidado.isAcompanhante}
+                            <span class="subtag-badge">Acompanhante</span>
+                          {/if}
+                        </div>
+                      </td>
+
+                      {#each colunas as col}
+                        {#if col.visivel}
+                          {#if col.id === 'contato'}
+                            <td class="col-contato">
+                              <div class="contact-box">
+                                <span class="phone">{convidado.contato}</span>
+                                {#if convidado.email}
+                                  <span class="email">{convidado.email}</span>
+                                {/if}
+                              </div>
+                            </td>
+                          {:else if col.id === 'confirmacao'}
+                            <td class="col-confirmacao">
+                              <select
+                                class="status-badge status-{convidado.confirmacao.toLowerCase().replace(/ /g, '-')}"
+                                value={convidado.confirmacao}
+                                onchange={(e) => handleMudarStatus(convidado.id, e.currentTarget.value as any)}
+                              >
+                                <option value="Pendente">● Pendente</option>
+                                <option value="Convite entregue">✉️ Convite entregue</option>
+                                <option value="Confirmado">✓ Confirmado</option>
+                                <option value="Não vai">✕ Não vai</option>
+                              </select>
+                            </td>
+                          {:else if col.id === 'tags'}
+                            <td class="col-tags">
+                              <div class="tags-wrapper">
+                                {#each convidado.tags as tag}
+                                  <span class="tag-pill">{tag}</span>
+                                {/each}
+                              </div>
+                            </td>
+                          {:else if col.id === 'acompanhante'}
+                            <td class="col-acompanhante">
+                              {#if convidado.isAcompanhante}
+                                <span class="companion-badge secondary" title="Convidado acompanhante">
+                                  Sim, de <strong>{getNomeConvidado(convidado.convidadoPrincipalId) || 'Convidado Principal'}</strong>
+                                </span>
+                              {/if}
+                            </td>
+                          {:else if col.id === 'acoes'}
+                            <td class="col-acoes text-right">
+                              <div class="actions-group">
+                                <button class="action-btn edit-btn" onclick={() => handleOpenModalEdit(convidado)} title="Editar convidado">
+                                  ✏️
+                                </button>
+                                <button class="action-btn delete-btn" onclick={() => handleExcluirConvidado(convidado.id, convidado.nome)} title="Excluir convidado">
+                                  🗑️
+                                </button>
+                              </div>
+                            </td>
+                          {:else if col.custom}
+                            <td class="col-custom">
+                              <input
+                                type="text"
+                                class="custom-cell-input"
+                                placeholder="Informe o valor..."
+                                value={convidado.customFields[col.id] || ''}
+                                onblur={(e) => handleAtualizarCustomField(convidado.id, col.id, e.currentTarget.value)}
+                              />
+                            </td>
+                          {/if}
+                        {/if}
+                      {/each}
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {/each}
+        </div>
+
       {:else}
+        <!-- MODO PADRÃO DE LISTAGEM COM DRAG AND DROP REORDERING -->
         <table class="guest-table">
           <thead>
             <tr>
@@ -1137,9 +1362,19 @@
           </thead>
           <tbody>
             {#each convidadosFiltrados as convidado, index (convidado.id)}
-              <tr class={convidado.isAcompanhante ? 'row-acompanhante' : ''}>
+              <tr
+                draggable="true"
+                ondragstart={(e) => handleDragStart(e, index)}
+                ondragover={handleDragOver}
+                ondrop={(e) => handleDrop(e, index)}
+                class="{convidado.isAcompanhante ? 'row-acompanhante' : ''} {draggedIndex === index ? 'row-dragging' : ''}"
+              >
+                <!-- Numeração Sequencial com Alça Drag & Drop -->
                 <td class="col-num">
-                  <span class="row-number">{index + 1}</span>
+                  <div class="drag-handle-box">
+                    <span class="drag-handle" title="Arrastar para reordenar">⋮⋮</span>
+                    <span class="row-number">{index + 1}</span>
+                  </div>
                 </td>
 
                 <td class="col-nome">
@@ -1157,7 +1392,7 @@
                       <td class="col-contato">
                         <div class="contact-box">
                           <span class="phone">{convidado.contato}</span>
-                          {#if convidado.email && convidado.email !== '-'}
+                          {#if convidado.email}
                             <span class="email">{convidado.email}</span>
                           {/if}
                         </div>
@@ -1165,11 +1400,12 @@
                     {:else if col.id === 'confirmacao'}
                       <td class="col-confirmacao">
                         <select
-                          class="status-badge status-{convidado.confirmacao.toLowerCase().replace(' ', '-')}"
+                          class="status-badge status-{convidado.confirmacao.toLowerCase().replace(/ /g, '-')}"
                           value={convidado.confirmacao}
                           onchange={(e) => handleMudarStatus(convidado.id, e.currentTarget.value as any)}
                         >
                           <option value="Pendente">● Pendente</option>
+                          <option value="Convite entregue">✉️ Convite entregue</option>
                           <option value="Confirmado">✓ Confirmado</option>
                           <option value="Não vai">✕ Não vai</option>
                         </select>
@@ -1238,9 +1474,7 @@
   </div>
 {/if}
 
-<!-- ====================================================
-     MODAL DE IMPORTAÇÃO INTERATIVA DE CSV
-==================================================== -->
+<!-- MODAL DE IMPORTAÇÃO INTERATIVA DE CSV -->
 {#if isCsvModalOpen}
   <div
     class="modal-backdrop"
@@ -1340,7 +1574,7 @@
                   <tr>
                     <td><strong>{item.nome}</strong></td>
                     <td>{item.contato}</td>
-                    <td><span class="status-badge status-{item.confirmacao.toLowerCase().replace(' ', '-')}">{item.confirmacao}</span></td>
+                    <td><span class="status-badge status-{item.confirmacao.toLowerCase().replace(/ /g, '-')}">{item.confirmacao}</span></td>
                     <td>
                       <div class="tags-wrapper">
                         {#each item.tags as t}
@@ -1372,7 +1606,7 @@
   </div>
 {/if}
 
-<!-- Modal para Adicionar / Editar Convidado -->
+<!-- MODAL PARA ADICIONAR / EDITAR CONVIDADO -->
 {#if isModalOpen}
   <div
     class="modal-backdrop"
@@ -1435,9 +1669,10 @@
           <div class="form-group">
             <label for="confirmacao">Status de Confirmação</label>
             <select id="confirmacao" bind:value={formConfirmacao}>
-              <option value="Pendente">Pendente</option>
-              <option value="Confirmado">Confirmado</option>
-              <option value="Não vai">Não vai</option>
+              <option value="Pendente">● Pendente</option>
+              <option value="Convite entregue">✉️ Convite entregue</option>
+              <option value="Confirmado">✓ Confirmado</option>
+              <option value="Não vai">✕ Não vai</option>
             </select>
           </div>
         </div>
@@ -1515,7 +1750,7 @@
   </div>
 {/if}
 
-<!-- Modal para Editar e Excluir Tags Globais -->
+<!-- MODAL PARA EDITAR E EXCLUIR TAGS GLOBAIS -->
 {#if isTagManagerOpen}
   <div
     class="modal-backdrop"
@@ -1865,6 +2100,13 @@
     display: flex;
     gap: 0.6rem;
     align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .active-group-btn {
+    background: #FFF0F4 !important;
+    border-color: #8C1D40 !important;
+    color: #8C1D40 !important;
   }
 
   .title-group h1 {
@@ -1925,6 +2167,148 @@
     background-color: #FFF8F3;
     color: #8C1D40;
     border-color: #C44569;
+  }
+
+  /* Status Badges */
+  .status-badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .status-confirmado {
+    background-color: #E6F4EA;
+    color: #1E7E34;
+    border-color: #CEEAD6;
+  }
+
+  .status-convite-entregue {
+    background-color: #F3E8FF;
+    color: #6B21A8;
+    border-color: #E9D5FF;
+  }
+
+  .status-pendente {
+    background-color: #FEF3D6;
+    color: #B45309;
+    border-color: #FDE68A;
+  }
+
+  .status-não-vai {
+    background-color: #FCE8E6;
+    color: #C5221F;
+    border-color: #F87171;
+  }
+
+  /* Metric Cards */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .metric-card {
+    background: #FFFDFB;
+    border: 1px solid #E7D6DC;
+    padding: 1.2rem 1.4rem;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    box-shadow: 0 2px 8px rgba(47, 24, 34, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(47, 24, 34, 0.06);
+  }
+
+  .metric-label {
+    font-size: 0.82rem;
+    color: #7A6670;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .metric-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #8C1D40;
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+
+  .metric-card.confirmados .metric-value {
+    color: #1E7E34;
+  }
+
+  .metric-card.entregues .metric-value {
+    color: #6B21A8;
+  }
+
+  .metric-card.pendentes .metric-value {
+    color: #B45309;
+  }
+
+  .metric-card.ausentes .metric-value {
+    color: #C5221F;
+  }
+
+  /* Drag and Drop Styles */
+  .drag-handle-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  .drag-handle {
+    cursor: grab;
+    color: #A38F98;
+    font-size: 0.95rem;
+    user-select: none;
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .row-dragging {
+    opacity: 0.4;
+    background-color: #FFF0F4 !important;
+  }
+
+  /* Tag Grouping Sections */
+  .tag-grouped-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .tag-group-section {
+    background: #FFFDFB;
+    border: 1px solid #E7D6DC;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .tag-group-header {
+    background: #FFF8F3;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid #E7D6DC;
+  }
+
+  .tag-group-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #8C1D40;
   }
 
   /* CSV Modal Styles */
@@ -2047,57 +2431,6 @@
     color: #7A6670;
     text-align: center;
     margin: 0;
-  }
-
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-
-  .metric-card {
-    background: #FFFDFB;
-    border: 1px solid #E7D6DC;
-    padding: 1.2rem 1.4rem;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    box-shadow: 0 2px 8px rgba(47, 24, 34, 0.03);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .metric-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(47, 24, 34, 0.06);
-  }
-
-  .metric-label {
-    font-size: 0.82rem;
-    color: #7A6670;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .metric-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #8C1D40;
-    font-family: 'Playfair Display', Georgia, serif;
-  }
-
-  .metric-card.confirmados .metric-value {
-    color: #1E7E34;
-  }
-
-  .metric-card.pendentes .metric-value {
-    color: #B45309;
-  }
-
-  .metric-card.ausentes .metric-value {
-    color: #C5221F;
   }
 
   .toolbar {
@@ -2416,7 +2749,7 @@
 
   .col-num-header,
   .col-num {
-    width: 48px;
+    width: 58px;
     text-align: center !important;
   }
 
@@ -2426,8 +2759,8 @@
     color: #9C858F;
     background: #FFF8F3;
     border: 1px solid #E7D6DC;
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
@@ -2485,35 +2818,6 @@
   .email {
     font-size: 0.8rem;
     color: #8C7B83;
-  }
-
-  .status-badge {
-    padding: 0.35rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    border: 1px solid transparent;
-    outline: none;
-    cursor: pointer;
-    font-family: inherit;
-  }
-
-  .status-confirmado {
-    background-color: #E6F4EA;
-    color: #1E7E34;
-    border-color: #CEEAD6;
-  }
-
-  .status-pendente {
-    background-color: #FEF3D6;
-    color: #B45309;
-    border-color: #FDE68A;
-  }
-
-  .status-não-vai {
-    background-color: #FCE8E6;
-    color: #C5221F;
-    border-color: #F87171;
   }
 
   .tags-wrapper {

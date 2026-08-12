@@ -14,7 +14,7 @@ export interface ConvidadoPB {
   nome: string;
   contato: string;
   email: string;
-  confirmacao: 'Confirmado' | 'Pendente' | 'Não vai';
+  confirmacao: 'Confirmado' | 'Pendente' | 'Convite entregue' | 'Não vai';
   tags: string[];
   is_acompanhante: boolean;
   convidado_principal?: string;
@@ -32,14 +32,11 @@ class CasamentoState {
       this.loading = true;
       this.errorMsg = '';
 
-      // O listRule da coleção 'casamentos' no PocketBase já filtra automaticamente
-      // apenas os casamentos onde o usuário logado seja dono ou membro
       const result = await pb.collection('casamentos').getList<CasamentoRecord>(1, 50);
 
       this.casamentosDoUsuario = result.items;
 
       if (result.items.length > 0) {
-        // Seleciona o primeiro casamento como ativo por padrão
         this.casamentoAtivo = result.items[0];
       } else {
         this.casamentoAtivo = null;
