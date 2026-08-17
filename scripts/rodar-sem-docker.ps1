@@ -51,8 +51,10 @@ if (-not (Test-Path $PbExe)) {
     }
 }
 
+$PbHooks = "$ProjectRoot\apps\pocketbase\pb_hooks"
+
 Write-Host "🚀 Iniciando PocketBase localmente..." -ForegroundColor Cyan
-$pbProcess = Start-Process -FilePath $PbExe -ArgumentList "serve --dir=`"$PbData`" --migrationsDir=`"$PbMigrations`"" -PassThru
+$pbProcess = Start-Process -FilePath $PbExe -ArgumentList "serve --dir=`"$PbData`" --migrationsDir=`"$PbMigrations`" --hooksDir=`"$PbHooks`"" -PassThru
 
 Write-Host "⚡ Iniciando SvelteKit - apps/web..." -ForegroundColor Green
 Set-Location "$ProjectRoot\apps\web"

@@ -1102,6 +1102,8 @@
             >👤 <strong>{auth.user?.email || ""}</strong></span
           >
 
+          <a href="/pagamento" class="btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem;">💳 Testar Mercado Pago</a>
+
           {#if casamentoState.casamentosDoUsuario.length > 1 || isCriandoNovoSet === false}
             <button
               class="btn-secondary btn-sm"
