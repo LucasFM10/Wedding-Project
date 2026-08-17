@@ -40,7 +40,7 @@ services:
       dockerfile: Dockerfile
       args:
         PUBLIC_POCKETBASE_URL: "http://127.0.0.1:8090"
-        PUBLIC_MERCADO_PAGO_PUBLIC_KEY: "APP_USR_EXEMPLO"
+        PUBLIC_MERCADO_PAGO_PUBLIC_KEY: "${PUBLIC_MERCADO_PAGO_PUBLIC_KEY:-APP_USR_EXEMPLO}"
     ports:
       - "5173:80"
 

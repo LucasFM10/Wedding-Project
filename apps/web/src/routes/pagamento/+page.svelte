@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { pb } from '$lib/pocketbase';
+	import { PUBLIC_MERCADO_PAGO_PUBLIC_KEY } from '$env/static/public';
 	import { env } from '$env/dynamic/public';
 
 	// Método de pagamento selecionado: 'pix' | 'card'
@@ -65,7 +66,7 @@
 
 	// Instância SDK MercadoPago.js
 	let mpInstance: any = null;
-	const publicKey = env.PUBLIC_MERCADO_PAGO_PUBLIC_KEY || 'APP_USR_EXEMPLO';
+	const publicKey = PUBLIC_MERCADO_PAGO_PUBLIC_KEY || env.PUBLIC_MERCADO_PAGO_PUBLIC_KEY || 'APP_USR_EXEMPLO';
 
 	function setPresetValue(v: number) {
 		valor = v;
